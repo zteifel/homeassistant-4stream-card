@@ -140,8 +140,8 @@ const STYLES = `
     -webkit-appearance: none;
     appearance: none;
     flex: 1;
-    height: 4px;
-    border-radius: 2px;
+    height: 8px;
+    border-radius: 4px;
     background: rgba(128,128,128,0.3);
     outline: none;
     cursor: pointer;
@@ -150,15 +150,15 @@ const STYLES = `
   .no-art input[type=range] { background: rgba(var(--rgb-primary-text-color,0,0,0),0.12); }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px; height: 14px;
+    width: 16px; height: 16px;
     border-radius: 50%;
-    background: var(--primary-color);
+    background: var(--art-text, #fff);
     border: none;
   }
   input[type=range]::-moz-range-thumb {
-    width: 14px; height: 14px;
+    width: 16px; height: 16px;
     border-radius: 50%;
-    background: var(--primary-color);
+    background: var(--art-text, #fff);
     border: none;
   }
 
