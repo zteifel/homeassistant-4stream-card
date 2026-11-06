@@ -611,9 +611,10 @@ class AsoundMediaCard extends HTMLElement {
 
       if (eid === '__group__' && !this._groupVolStart) {
         const st = this._hass.states[this._config.entity];
-        const members = st?.attributes?.group_members || [this._config.entity];
+        let members = st?.attributes?.group_members;
+        if (!members || members.length === 0) members = [this._config.entity];
         const mainVol = Math.round((st?.attributes?.volume_level || 0) * 100);
-        this._groupVolStart = { slider: mainVol, members: [...members] };
+        this._groupVolStart = { slider: mainVol, members };
         for (const m of members) {
           const ms = this._hass.states[m];
           this._groupVolStart[m] = Math.round((ms?.attributes?.volume_level || 0) * 100);
@@ -622,14 +623,18 @@ class AsoundMediaCard extends HTMLElement {
 
       clearTimeout(this._volTimers[eid]);
       this._volTimers[eid] = setTimeout(() => {
-        if (eid === '__group__' && this._groupVolStart) {
-          const delta = val - this._groupVolStart.slider;
-          for (const m of this._groupVolStart.members) {
-            const base = this._groupVolStart[m] ?? val;
-            const nv = Math.max(0, Math.min(100, base + delta));
-            this._svc('media_player', 'volume_set', m, { volume_level: nv / 100 });
+        if (eid === '__group__') {
+          if (this._groupVolStart) {
+            const delta = val - this._groupVolStart.slider;
+            for (const m of this._groupVolStart.members) {
+              const base = this._groupVolStart[m] ?? val;
+              const nv = Math.max(0, Math.min(100, base + delta));
+              this._svc('media_player', 'volume_set', m, { volume_level: nv / 100 });
+            }
+          } else {
+            this._svc('media_player', 'volume_set', this._config.entity, { volume_level: val / 100 });
           }
-        } else if (eid !== '__group__') {
+        } else {
           this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
         }
       }, 150);
