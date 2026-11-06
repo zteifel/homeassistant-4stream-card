@@ -111,37 +111,14 @@ const STYLES = `
     transition: background 0.15s;
   }
   .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
-  .ctrl-btn svg { width: 24px; height: 24px; fill: currentColor; }
+  .ctrl-btn svg { width: 24px; height: 24px; fill: currentColor; pointer-events: none; }
   .ctrl-btn.play-btn { width: 48px; height: 48px; }
   .ctrl-btn.play-btn svg { width: 32px; height: 32px; }
+  .ctrl-btn.sp-btn { margin-left: auto; }
+  .ctrl-btn.sp-btn.active { color: var(--primary-color); }
+  .ctrl-btn.sp-btn svg { width: 20px; height: 20px; }
   .no-art .ctrl-btn { color: var(--primary-text-color); }
   .no-art .ctrl-btn:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
-
-  .controls-right {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    z-index: 2;
-  }
-  .sp-icon-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    color: rgba(255,255,255,0.7);
-    transition: background 0.15s, color 0.15s;
-  }
-  .sp-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-  .sp-icon-btn.active { color: var(--primary-color); }
-  .sp-icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
-  .no-art .sp-icon-btn { color: var(--secondary-text-color); }
-  .no-art .sp-icon-btn:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); color: var(--primary-text-color); }
 
   /* ── Volume ── */
   .vol-row {
@@ -351,7 +328,7 @@ const STYLES = `
     padding: 0; flex-shrink: 0;
   }
   .mini-play:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
-  .mini-play svg { width: 20px; height: 20px; fill: currentColor; }
+  .mini-play svg { width: 20px; height: 20px; fill: currentColor; pointer-events: none; }
 
   .unavailable-msg {
     padding: 24px 16px;
@@ -488,13 +465,6 @@ class AsoundMediaCard extends HTMLElement {
     // Content
     html += `<div class="player-content">`;
 
-    // Speaker icon (top right)
-    if (hasSpeakers) {
-      html += `<div class="controls-right">`;
-      html += `<button class="sp-icon-btn ${this._spPanelOpen ? 'active' : ''}" data-action="toggle-sp">${SVG.speakers}</button>`;
-      html += `</div>`;
-    }
-
     // Now playing
     html += `<div class="now-playing">`;
     if (hasArt) {
@@ -512,6 +482,9 @@ class AsoundMediaCard extends HTMLElement {
     html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
     html += `<button class="ctrl-btn play-btn" data-action="pp">${isPlaying ? SVG.pause : SVG.play}</button>`;
     html += `<button class="ctrl-btn" data-action="next">${SVG.next}</button>`;
+    if (hasSpeakers) {
+      html += `<button class="ctrl-btn sp-btn ${this._spPanelOpen ? 'active' : ''}" data-action="toggle-sp">${SVG.speakers}</button>`;
+    }
     html += `</div>`;
 
     // Volume
