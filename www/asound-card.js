@@ -406,135 +406,171 @@ class AsoundMediaCard extends HTMLElement {
     return (active || this._forceExpanded) ? 3 : 1;
   }
 
-  _render() {
-    if (!this._card || !this._hass) return;
-
+  _getState() {
     const entity = this._hass.states[this._config.entity];
-    if (!entity) {
-      this._card.innerHTML = `<div class="unavailable-msg">Entity ${esc(this._config.entity)} not found</div>`;
-      return;
-    }
-
+    if (!entity) return null;
     const a = entity.attributes;
-    const name = a.friendly_name || this._config.entity;
     const isPlaying = entity.state === 'playing';
     const isPaused = entity.state === 'paused';
     const isActive = isPlaying || isPaused;
-    const showFull = isActive || this._forceExpanded;
-
-    if (isActive) this._forceExpanded = false;
-
-    // Artwork: prefer artwork_entity, then main entity
     const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
     const artEntPic = artEnt?.attributes?.entity_picture;
-    const artUrl = artEntPic || a.entity_picture || '';
-    const hasArt = !!artUrl;
-    const title = a.media_title || (artEntPic && artEnt.attributes.media_title) || '';
-    const artist = a.media_artist || (artEntPic && artEnt.attributes.media_artist) || '';
-    const vol = Math.round((a.volume_level || 0) * 100);
-    const muted = a.is_volume_muted;
-    const volIcon = muted ? SVG.volMute : (vol > 50 ? SVG.volHi : SVG.volLo);
-
     const groupMembers = a.group_members || [];
     const groupSet = new Set(groupMembers);
-    const master = groupMembers[0] || this._config.entity;
-    const groupCount = groupMembers.length > 1 ? groupMembers.length : 0;
     const speakers = this._config.speakers || [];
-    const hasSpeakers = speakers.length > 0;
+    return {
+      entity, a, isPlaying, isPaused, isActive,
+      name: a.friendly_name || this._config.entity,
+      showFull: isActive || this._forceExpanded,
+      artUrl: artEntPic || a.entity_picture || '',
+      title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
+      artist: a.media_artist || (artEntPic && artEnt?.attributes.media_artist) || '',
+      vol: Math.round((a.volume_level || 0) * 100),
+      muted: !!a.is_volume_muted,
+      groupMembers, groupSet, speakers,
+      hasSpeakers: speakers.length > 0,
+    };
+  }
 
-    // ── Minimized ──
-    if (!showFull) {
+  _renderKey(s) {
+    if (!s) return 'unavail';
+    const gk = [...s.groupSet].sort().join(',');
+    return `${s.showFull}|${!!s.artUrl}|${this._spPanelOpen}|${s.speakers.join(',')}|${gk}`;
+  }
+
+  _render() {
+    if (!this._card || !this._hass) return;
+    const s = this._getState();
+    if (!s) {
+      this._card.innerHTML = `<div class="unavailable-msg">Entity ${esc(this._config.entity)} not found</div>`;
+      this._lastRenderKey = 'unavail';
+      return;
+    }
+    if (s.isActive) this._forceExpanded = false;
+    const key = this._renderKey(s);
+    if (key !== this._lastRenderKey) {
+      this._lastRenderKey = key;
+      this._rebuild(s);
+    }
+    this._updateValues(s);
+  }
+
+  _rebuild(s) {
+    if (!s.showFull) {
       this._card.innerHTML = `
         <div class="mini-bar" data-action="expand">
-          ${artUrl
-            ? `<img class="mini-thumb" src="${esc(artUrl)}" alt="">`
-            : '<div class="mini-icon">♪</div>'
-          }
+          <div class="mini-icon">♪</div>
           <div class="mini-info">
-            <div class="mini-name">${esc(name)}</div>
-            <div class="mini-state">${esc(entity.state)}</div>
+            <div class="mini-name"></div>
+            <div class="mini-state"></div>
           </div>
           <button class="mini-play" data-action="play">${SVG.play}</button>
-        </div>
-      `;
+        </div>`;
       return;
     }
 
-    // ── Full player ──
+    const hasArt = !!s.artUrl;
+    const speakers = s.speakers;
     let html = `<div class="player ${hasArt ? '' : 'no-art'}">`;
-
-    // Background
-    html += `<div class="player-bg" ${hasArt ? `style="background-image:url('${esc(artUrl)}')"` : ''}></div>`;
-
-    // Content
+    html += `<div class="player-bg"></div>`;
     html += `<div class="player-content">`;
 
-    // Now playing
     html += `<div class="now-playing">`;
     if (hasArt) {
-      html += `<img class="art-thumb" src="${esc(artUrl)}" alt="">`;
+      html += `<img class="art-thumb" src="" alt="">`;
     } else {
       html += `<div class="art-placeholder">♪</div>`;
     }
-    html += `<div class="track-info">`;
-    html += `<div class="track-title">${title ? esc(title) : (isPlaying ? esc(name) : esc(entity.state))}</div>`;
-    if (artist) html += `<div class="track-artist">${esc(artist)}</div>`;
-    html += `</div></div>`;
+    html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div></div>`;
 
-    // Transport
     html += `<div class="controls">`;
     html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
-    html += `<button class="ctrl-btn play-btn" data-action="pp">${isPlaying ? SVG.pause : SVG.play}</button>`;
+    html += `<button class="ctrl-btn play-btn" data-action="pp"></button>`;
     html += `<button class="ctrl-btn" data-action="next">${SVG.next}</button>`;
-    if (hasSpeakers) {
+    if (s.hasSpeakers) {
       html += `<button class="ctrl-btn sp-btn ${this._spPanelOpen ? 'active' : ''}" data-action="toggle-sp">${SVG.speakers}</button>`;
     }
     html += `</div>`;
 
-    // Volume (group — applies to all grouped speakers)
     html += `<div class="vol-row">`;
-    html += `<span class="vol-icon" data-action="mute">${volIcon}</span>`;
-    html += `<input type="range" min="0" max="100" value="${vol}" data-vol="__group__">`;
-    html += `<span class="vol-val">${vol}%</span>`;
+    html += `<span class="vol-icon" data-action="mute"></span>`;
+    html += `<input type="range" min="0" max="100" value="0" data-vol="__group__">`;
+    html += `<span class="vol-val"></span>`;
     html += `</div>`;
 
-    // Speaker panel (inline, below volume)
-    if (hasSpeakers) {
+    if (s.hasSpeakers) {
       const panelH = this._spPanelOpen ? (speakers.length * 52 + 20) : 0;
       html += `<div class="sp-panel ${this._spPanelOpen ? 'open' : ''}" style="max-height:${panelH}px">`;
-
       for (const spId of speakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
-        const spName = sp.attributes.friendly_name || spId;
-        const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
-        const inGroup = groupSet.has(spId);
-        const isMaster = spId === master && groupCount > 0;
         const isMain = spId === this._config.entity;
-
-        html += `<div class="sp-row">`;
+        const inGroup = s.groupSet.has(spId);
+        html += `<div class="sp-row" data-sp="${spId}">`;
         if (isMain) {
           html += `<div class="sp-toggle-placeholder"></div>`;
         } else {
           html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} data-group-toggle="${spId}"><span class="sl"></span></label>`;
         }
         html += `<div class="sp-info">`;
-        html += `<div class="sp-name ${isMain ? 'master' : ''}">${esc(spName)}</div>`;
+        html += `<div class="sp-name ${isMain ? 'master' : ''}">${esc(sp.attributes.friendly_name || spId)}</div>`;
         if (inGroup || isMain) {
-          html += `<div class="sp-vol-row">`;
-          html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
-          html += `<span class="sp-vol-val">${spVol}%</span>`;
-          html += `</div>`;
+          html += `<div class="sp-vol-row"><input type="range" min="0" max="100" value="0" data-vol="${spId}"><span class="sp-vol-val"></span></div>`;
         }
-        html += `</div>`;
-        html += `</div>`;
+        html += `</div></div>`;
       }
-
       html += `</div>`;
     }
 
-    html += `</div></div>`; // player-content, player
+    html += `</div></div>`;
     this._card.innerHTML = html;
+  }
+
+  _updateValues(s) {
+    const q = sel => this._card.querySelector(sel);
+
+    if (!s.showFull) {
+      const n = q('.mini-name');
+      if (n) n.textContent = s.name;
+      const st = q('.mini-state');
+      if (st) st.textContent = s.entity.state;
+      return;
+    }
+
+    const titleEl = q('.track-title');
+    if (titleEl) titleEl.textContent = s.title || (s.isPlaying ? s.name : s.entity.state);
+    const artistEl = q('.track-artist');
+    if (artistEl) artistEl.textContent = s.artist;
+
+    const ppBtn = q('[data-action="pp"]');
+    if (ppBtn) ppBtn.innerHTML = s.isPlaying ? SVG.pause : SVG.play;
+
+    if (s.artUrl) {
+      const bg = q('.player-bg');
+      if (bg) bg.style.backgroundImage = `url('${s.artUrl}')`;
+      const thumb = q('.art-thumb');
+      if (thumb && thumb.src !== s.artUrl) thumb.src = s.artUrl;
+    }
+
+    const volIcon = q('.vol-icon');
+    if (volIcon) volIcon.innerHTML = s.muted ? SVG.volMute : (s.vol > 50 ? SVG.volHi : SVG.volLo);
+
+    if (!this._sliderActive) {
+      const volSlider = q('input[data-vol="__group__"]');
+      if (volSlider) volSlider.value = s.vol;
+      const volVal = q('.vol-val');
+      if (volVal) volVal.textContent = s.vol + '%';
+
+      for (const spId of s.speakers) {
+        const sp = this._hass.states[spId];
+        if (!sp) continue;
+        const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const spSlider = q(`input[data-vol="${spId}"]`);
+        if (spSlider) spSlider.value = spVol;
+        const spVal = spSlider?.nextElementSibling;
+        if (spVal) spVal.textContent = spVol + '%';
+      }
+    }
   }
 
   _attachEvents() {
