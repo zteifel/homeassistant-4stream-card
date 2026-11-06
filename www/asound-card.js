@@ -748,9 +748,9 @@ class AsoundMediaCard extends HTMLElement {
         for (let i = 0; i < data.length; i += 4) {
           r += data[i]; g += data[i+1]; b += data[i+2]; count++;
         }
-        r = Math.round(r / count * 0.4);
-        g = Math.round(g / count * 0.4);
-        b = Math.round(b / count * 0.4);
+        r = Math.round(r / count);
+        g = Math.round(g / count);
+        b = Math.round(b / count);
         const color = `rgb(${r},${g},${b})`;
         const player = this._card?.querySelector('.player');
         if (player) player.style.setProperty('--art-bg', color);
