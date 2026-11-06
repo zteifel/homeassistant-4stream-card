@@ -28,51 +28,25 @@ const STYLES = `
     z-index: 1;
   }
 
-  /* ── Album art hero ── */
-  .art-hero {
-    position: relative;
-    width: 100%;
-    display: flex;
-    min-height: 120px;
-  }
-  .art-hero-info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 16px;
-    z-index: 1;
-  }
-  .art-hero-img-wrap {
-    position: relative;
-    flex-shrink: 0;
-    width: 45%;
-  }
-  .art-hero-img-wrap img {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .art-hero-img-wrap::before {
-    content: '';
+  /* ── Album art (right side, full height) ── */
+  .art-bg-img {
     position: absolute;
-    inset: 0;
-    background: linear-gradient(to right, var(--art-bg, #1c1c1c) 0%, transparent 50%);
+    top: 0; right: 0; bottom: 0;
+    width: 55%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .art-bg-fade {
+    position: absolute;
+    top: 0; right: 0; bottom: 0;
+    width: 55%;
+    background: linear-gradient(to right, var(--art-bg, #1c1c1c) 0%, transparent 60%);
     z-index: 1;
   }
-  .art-placeholder-hero {
-    width: 100%;
-    padding: 24px 16px 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: rgba(255,255,255,0.3);
-    font-size: 32px;
-  }
-  .no-art .art-placeholder-hero {
-    color: var(--secondary-text-color);
+
+  /* ── Track info area ── */
+  .track-area {
+    padding: 16px 16px 8px;
   }
 
   /* ── Track info ── */
@@ -551,19 +525,14 @@ class AsoundMediaCard extends HTMLElement {
     html += `<div class="player-content">`;
 
     if (hasArt) {
-      html += `<div class="art-hero">`;
-      html += `<div class="art-hero-info">`;
-      html += `<div class="speaker-name">${esc(s.name)}</div>`;
-      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
-      html += `</div>`;
-      html += `<div class="art-hero-img-wrap"><img class="art-hero-img" src="" alt=""></div>`;
-      html += `</div>`;
-    } else {
-      html += `<div style="padding: 16px 16px 0">`;
-      html += `<div class="speaker-name">${esc(s.name)}</div>`;
-      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
-      html += `</div>`;
+      html += `<img class="art-bg-img" src="" alt="">`;
+      html += `<div class="art-bg-fade"></div>`;
     }
+
+    html += `<div class="track-area">`;
+    html += `<div class="speaker-name">${esc(s.name)}</div>`;
+    html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
+    html += `</div>`;
 
     html += `<div class="controls">`;
     html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
@@ -631,8 +600,8 @@ class AsoundMediaCard extends HTMLElement {
     if (ppBtn) ppBtn.innerHTML = s.isPlaying ? SVG.pause : SVG.play;
 
     if (s.artUrl) {
-      const heroImg = q('.art-hero-img');
-      if (heroImg && heroImg.src !== s.artUrl) heroImg.src = s.artUrl;
+      const bgImg = q('.art-bg-img');
+      if (bgImg && bgImg.src !== s.artUrl) bgImg.src = s.artUrl;
       this._extractColor(s.artUrl);
     }
 
