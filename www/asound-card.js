@@ -472,7 +472,7 @@ class AsoundMediaCard extends HTMLElement {
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
       artist: a.media_artist || (artEntPic && artEnt?.attributes.media_artist) || '',
-      vol: Math.round((a.volume_level || 0) * 100),
+      vol: Math.round(((a.volume_level != null ? a.volume_level : artEnt?.attributes?.volume_level) || 0) * 100),
       muted: !!a.is_volume_muted,
       groupMembers: mainGm, groupSet, speakers,
       hasSpeakers: speakers.length > 0,
@@ -616,7 +616,7 @@ class AsoundMediaCard extends HTMLElement {
       for (const spId of s.speakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
-        const hassVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const hassVol = Math.round((sp.attributes.volume_level ?? 0) * 100);
         const spVol = this._resolveVol(spId, hassVol);
         const spSlider = q(`input[data-vol="${spId}"]`);
         if (spSlider) spSlider.value = spVol;
