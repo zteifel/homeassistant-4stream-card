@@ -565,7 +565,9 @@ class AsoundMediaCard extends HTMLElement {
         }
         html += `<div class="sp-info">`;
         html += `<div class="sp-name ${isMain ? 'master' : ''}">${esc(sp.attributes.friendly_name || spId)}</div>`;
-        html += `<div class="sp-vol-row"><input type="range" min="0" max="100" value="0" data-vol="${spId}"><span class="sp-vol-val"></span></div>`;
+        if (isMain || inGroup) {
+          html += `<div class="sp-vol-row"><input type="range" min="0" max="100" value="0" data-vol="${spId}"><span class="sp-vol-val"></span></div>`;
+        }
         html += `</div></div>`;
       }
       html += `</div>`;
