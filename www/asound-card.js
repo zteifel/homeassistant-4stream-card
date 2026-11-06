@@ -361,6 +361,8 @@ class AsoundMediaCard extends HTMLElement {
     this._forceExpanded = false;
     this._spPanelOpen = false;
     this._volTimers = {};
+    this._sliderActive = false;
+    this._sliderEndTimer = null;
     this._built = false;
   }
 
@@ -392,7 +394,7 @@ class AsoundMediaCard extends HTMLElement {
       this._built = true;
       this._attachEvents();
     }
-    this._render();
+    if (!this._sliderActive) this._render();
   }
 
   getCardSize() {
@@ -551,6 +553,12 @@ class AsoundMediaCard extends HTMLElement {
     this._card.addEventListener('input', (e) => {
       const slider = e.target.closest('input[data-vol]');
       if (!slider) return;
+      this._sliderActive = true;
+      clearTimeout(this._sliderEndTimer);
+      this._sliderEndTimer = setTimeout(() => {
+        this._sliderActive = false;
+        this._render();
+      }, 600);
       const eid = slider.dataset.vol;
       const val = parseInt(slider.value);
       const label = slider.nextElementSibling;
