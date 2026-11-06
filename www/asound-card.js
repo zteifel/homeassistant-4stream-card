@@ -87,6 +87,15 @@ const STYLES = `
   }
   .no-art .track-title { color: var(--primary-text-color); }
   .no-art .track-artist { color: var(--secondary-text-color); }
+  .speaker-name {
+    font-size: 0.7em;
+    color: rgba(255,255,255,0.45);
+    white-space: nowrap;
+    flex-shrink: 0;
+    align-self: flex-start;
+    margin-top: 4px;
+  }
+  .no-art .speaker-name { color: var(--secondary-text-color); }
 
   /* ── Transport controls ── */
   .controls {
@@ -487,7 +496,9 @@ class AsoundMediaCard extends HTMLElement {
     } else {
       html += `<div class="art-placeholder">♪</div>`;
     }
-    html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div></div>`;
+    html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
+    html += `<div class="speaker-name">${esc(s.name)}</div>`;
+    html += `</div>`;
 
     html += `<div class="controls">`;
     html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
@@ -685,19 +696,27 @@ class AsoundMediaCard extends HTMLElement {
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
     const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
+    const gm = mainState?.attributes?.group_members || [];
+    const isFollower = gm.length > 1 && gm[0] !== mainEnt;
 
-    if (artEntId && (!isActive || fromMini)) {
+    if (isFollower) {
+      this._svc('media_player', 'unjoin', mainEnt);
+    }
+
+    if (artEntId && (!isActive || fromMini || isFollower)) {
       const artEnt = this._hass.states[artEntId];
       if (artEnt) {
         const speakerName = mainState?.attributes?.friendly_name || mainEnt;
-        console.log('[ASound] select_source on:', artEntId, 'source:', speakerName);
-        this._hass.callWS({
-          type: 'call_service',
-          domain: 'media_player',
-          service: 'select_source',
-          target: { entity_id: artEntId },
-          service_data: { source: speakerName },
-        });
+        const delay = isFollower ? 500 : 0;
+        setTimeout(() => {
+          this._hass.callWS({
+            type: 'call_service',
+            domain: 'media_player',
+            service: 'select_source',
+            target: { entity_id: artEntId },
+            service_data: { source: speakerName },
+          });
+        }, delay);
         return;
       }
     }
