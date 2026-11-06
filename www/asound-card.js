@@ -15,7 +15,65 @@ const STYLES = `
   ha-card {
     overflow: hidden;
     position: relative;
+    transition: all 0.3s ease;
   }
+
+  /* ── Minimized ── */
+  .mini-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .mini-bar:hover { background: rgba(255,255,255,0.03); }
+  .mini-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(var(--rgb-primary-color, 255,152,0), 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-color);
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .mini-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .mini-name {
+    font-size: 0.92em;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--primary-text-color);
+  }
+  .mini-state {
+    font-size: 0.78em;
+    color: var(--secondary-text-color);
+    text-transform: capitalize;
+  }
+  .mini-play {
+    background: none;
+    border: none;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .mini-play:hover { background: rgba(255,255,255,0.08); }
+  .mini-play svg { width: 20px; height: 20px; fill: currentColor; }
 
   /* ── Artwork ── */
   .art-wrap {
@@ -365,6 +423,7 @@ class AsoundMediaCard extends HTMLElement {
     super();
     this.attachShadow({ mode: 'open' });
     this._expanded = true;
+    this._forceExpanded = false;
     this._volTimers = {};
     this._dragging = new Set();
   }
@@ -390,7 +449,12 @@ class AsoundMediaCard extends HTMLElement {
     this._update(prev);
   }
 
-  getCardSize() { return 4; }
+  getCardSize() {
+    if (!this._hass) return 1;
+    const entity = this._hass.states[this._config?.entity];
+    const active = entity && (entity.state === 'playing' || entity.state === 'paused');
+    return (active || this._forceExpanded) ? 4 : 1;
+  }
 
   // ── Build DOM (once) ──
 
@@ -433,7 +497,26 @@ class AsoundMediaCard extends HTMLElement {
 
     const volIcon = muted ? SVG.volMute : (vol > 50 ? SVG.volHi : SVG.volLo);
 
+    const isActive = isPlaying || isPaused;
+    const showFull = isActive || this._forceExpanded;
+
     let html = '';
+
+    if (!showFull) {
+      html += `<div class="mini-bar" data-action="expand">`;
+      html += `<div class="mini-icon">♪</div>`;
+      html += `<div class="mini-info">`;
+      html += `<div class="mini-name">${esc(name)}</div>`;
+      html += `<div class="mini-state">${esc(entity.state)}</div>`;
+      html += `</div>`;
+      html += `<button class="mini-play" data-action="pp">${SVG.play}</button>`;
+      html += `</div>`;
+      card.innerHTML = html;
+      this._attachEvents(card);
+      return;
+    }
+
+    if (isActive) this._forceExpanded = false;
 
     // Artwork + now playing
     html += `<div class="art-wrap ${hasArt ? '' : 'no-art'}">`;
@@ -529,6 +612,10 @@ class AsoundMediaCard extends HTMLElement {
       else if (action === 'mute') {
         const st = this._hass.states[this._config.entity];
         this._svc('media_player', 'volume_mute', this._config.entity, { is_volume_muted: !st?.attributes?.is_volume_muted });
+      }
+      else if (action === 'expand') {
+        this._forceExpanded = true;
+        this._update(null);
       }
       else if (action === 'toggle-speakers') {
         this._expanded = !this._expanded;
