@@ -704,12 +704,17 @@ class AsoundMediaCard extends HTMLElement {
       if (!artEntId) return;
       const artEnt = this._hass.states[artEntId];
       if (!artEnt) return;
+      const sources = artEnt.attributes.source_list || [];
+      const match = sources.find(s => s.toLowerCase() === speakerName.toLowerCase())
+        || sources.find(s => speakerName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(speakerName.toLowerCase()));
+      const source = match || speakerName;
+      console.log('[ASound] select_source:', { entity: artEntId, source, speakerName, available: sources });
       this._hass.callWS({
         type: 'call_service',
         domain: 'media_player',
         service: 'select_source',
         target: { entity_id: artEntId },
-        service_data: { source: speakerName },
+        service_data: { source },
       });
     };
 
