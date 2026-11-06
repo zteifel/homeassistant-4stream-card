@@ -171,7 +171,7 @@ const STYLES = `
     border-top: 0 solid transparent;
   }
   .sp-panel.open {
-    border-top: 1px solid rgba(255,255,255,0.08);
+    border-top: 1px solid rgba(128,128,128,0.2);
     padding: 8px 16px 12px;
   }
   .no-art .sp-panel.open { border-top-color: var(--divider-color); }
@@ -199,7 +199,7 @@ const STYLES = `
   .sp-toggle .sl {
     position: absolute;
     inset: 0;
-    background: rgba(255,255,255,0.15);
+    background: rgba(128,128,128,0.25);
     border-radius: 10px;
     cursor: pointer;
     transition: background 0.2s;
@@ -210,7 +210,7 @@ const STYLES = `
     position: absolute;
     width: 16px; height: 16px;
     left: 2px; bottom: 2px;
-    background: rgba(255,255,255,0.8);
+    background: var(--art-text, rgba(255,255,255,0.8));
     border-radius: 50%;
     transition: transform 0.2s;
   }
@@ -220,7 +220,6 @@ const STYLES = `
   }
   .sp-toggle input:checked + .sl::before {
     transform: translateX(16px);
-    background: #fff;
   }
 
   .sp-info {
@@ -232,7 +231,7 @@ const STYLES = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #fff;
+    color: var(--art-text, #fff);
   }
   .sp-name.master { font-weight: 600; }
   .no-art .sp-name { color: var(--primary-text-color); }
@@ -245,7 +244,7 @@ const STYLES = `
   .sp-vol-row input[type=range] { height: 3px; }
   .sp-vol-val {
     font-size: 0.7em;
-    color: rgba(255,255,255,0.5);
+    color: var(--art-text-muted, rgba(255,255,255,0.5));
     width: 28px;
     text-align: right;
     font-variant-numeric: tabular-nums;
