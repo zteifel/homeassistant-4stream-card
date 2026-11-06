@@ -553,19 +553,10 @@ class AsoundMediaCard extends HTMLElement {
       for (const spId of speakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
-        const isMain = spId === this._config.entity;
-        const inGroup = s.groupSet.has(spId);
         html += `<div class="sp-row" data-sp="${spId}">`;
-        if (isMain) {
-          html += `<div class="sp-toggle-placeholder"></div>`;
-        } else {
-          html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} data-group-toggle="${spId}"><span class="sl"></span></label>`;
-        }
         html += `<div class="sp-info">`;
-        html += `<div class="sp-name ${isMain ? 'master' : ''}">${esc(sp.attributes.friendly_name || spId)}</div>`;
-        if (inGroup || isMain) {
-          html += `<div class="sp-vol-row"><input type="range" min="0" max="100" value="0" data-vol="${spId}"><span class="sp-vol-val"></span></div>`;
-        }
+        html += `<div class="sp-name">${esc(sp.attributes.friendly_name || spId)}</div>`;
+        html += `<div class="sp-vol-row"><input type="range" min="0" max="100" value="0" data-vol="${spId}"><span class="sp-vol-val"></span></div>`;
         html += `</div></div>`;
       }
       html += `</div>`;
