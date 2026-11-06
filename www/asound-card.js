@@ -25,7 +25,7 @@ const STYLES = `
   }
   .player-content {
     position: relative;
-    z-index: 1;
+    z-index: 2;
   }
 
   /* ── Album art (right side, full height) ── */
