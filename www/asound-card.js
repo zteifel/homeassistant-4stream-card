@@ -656,7 +656,14 @@ class AsoundMediaCard extends HTMLElement {
       const artEnt = this._hass.states[artEntId];
       if (artEnt) {
         const speakerName = mainState?.attributes?.friendly_name || mainEnt;
-        this._hass.callService('media_player', 'select_source', { source: speakerName }, { entity_id: artEntId });
+        console.log('[ASound] select_source on:', artEntId, 'source:', speakerName);
+        this._hass.callWS({
+          type: 'call_service',
+          domain: 'media_player',
+          service: 'select_source',
+          target: { entity_id: artEntId },
+          service_data: { source: speakerName },
+        });
         return;
       }
     }
