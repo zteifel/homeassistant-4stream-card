@@ -17,6 +17,54 @@ const STYLES = `
     transition: all 0.3s ease;
   }
 
+  /* ── Artwork header (from artwork_entity) ── */
+  .art-header {
+    position: relative;
+    overflow: hidden;
+  }
+  .art-bg {
+    position: absolute;
+    inset: -20px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(24px) brightness(0.35) saturate(1.2);
+  }
+  .art-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    z-index: 1;
+  }
+  .art-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.08);
+  }
+  .art-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .art-title {
+    font-size: 0.95em;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .art-artist {
+    font-size: 0.82em;
+    color: rgba(255,255,255,0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .native-wrap {
     /* Let the native card render without its own ha-card shell */
   }
@@ -282,7 +330,7 @@ class AsoundMediaCard extends HTMLElement {
 
   setConfig(config) {
     if (!config.entity) throw new Error('Please configure an entity');
-    this._config = { entity: config.entity, speakers: config.speakers || [], ...config };
+    this._config = { entity: config.entity, speakers: config.speakers || [], artwork_entity: config.artwork_entity || '', ...config };
 
     if (this._nativeCard) {
       this._nativeCard.setConfig({ type: 'media-control', entity: config.entity });
@@ -308,12 +356,14 @@ class AsoundMediaCard extends HTMLElement {
       <style>${STYLES}</style>
       <ha-card>
         <div class="mini-bar" hidden></div>
+        <div class="art-header" hidden></div>
         <div class="native-wrap" hidden></div>
         <div class="speakers-section"></div>
       </ha-card>
     `;
 
     this._miniBar = this.shadowRoot.querySelector('.mini-bar');
+    this._artHeader = this.shadowRoot.querySelector('.art-header');
     this._nativeWrap = this.shadowRoot.querySelector('.native-wrap');
     this._speakersSection = this.shadowRoot.querySelector('.speakers-section');
 
@@ -355,15 +405,40 @@ class AsoundMediaCard extends HTMLElement {
 
     if (isActive) this._forceExpanded = false;
 
+    // Artwork from artwork_entity (e.g. Spotify)
+    const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
+    const artUrl = a.entity_picture || (artEnt && artEnt.attributes.entity_picture) || '';
+    const artTitle = a.media_title || (artEnt && artEnt.attributes.media_title) || '';
+    const artArtist = a.media_artist || (artEnt && artEnt.attributes.media_artist) || '';
+
     // Toggle between minimized and full
     if (showFull) {
       this._miniBar.hidden = true;
       this._nativeWrap.hidden = false;
+
+      // Show artwork header if we have artwork from the artwork_entity
+      // (skip if the main entity already has artwork — the native card shows it)
+      if (artUrl && !a.entity_picture && artEnt) {
+        this._artHeader.hidden = false;
+        this._artHeader.innerHTML = `
+          <div class="art-bg" style="background-image:url('${esc(artUrl)}')"></div>
+          <div class="art-content">
+            <img class="art-thumb" src="${esc(artUrl)}" alt="">
+            <div class="art-info">
+              ${artTitle ? `<div class="art-title">${esc(artTitle)}</div>` : ''}
+              ${artArtist ? `<div class="art-artist">${esc(artArtist)}</div>` : ''}
+            </div>
+          </div>
+        `;
+      } else {
+        this._artHeader.hidden = true;
+      }
     } else {
       this._miniBar.hidden = false;
       this._nativeWrap.hidden = true;
+      this._artHeader.hidden = true;
       this._miniBar.innerHTML = `
-        <div class="mini-icon">♪</div>
+        ${artUrl ? `<img class="mini-icon" src="${esc(artUrl)}" style="border-radius:8px;object-fit:cover">` : '<div class="mini-icon">♪</div>'}
         <div class="mini-info">
           <div class="mini-name">${esc(name)}</div>
           <div class="mini-state">${esc(entity.state)}</div>
@@ -562,6 +637,15 @@ class AsoundMediaCardEditor extends HTMLElement {
       </div>
 
       <div class="row">
+        <label>Artwork Entity (optional — e.g. your Spotify player)</label>
+        <ha-entity-picker
+          id="artwork-picker"
+          allow-custom-entity
+          .includeDomains=${['media_player']}
+        ></ha-entity-picker>
+      </div>
+
+      <div class="row">
         <label>Speakers (toggleable in group)</label>
         <div class="sp-list" id="sp-list">
           ${speakers.map((s, i) => `
@@ -586,6 +670,14 @@ class AsoundMediaCardEditor extends HTMLElement {
     if (this._hass) ep.hass = this._hass;
     ep.addEventListener('value-changed', (e) => {
       this._config = { ...this._config, entity: e.detail.value };
+      this._fire();
+    });
+
+    const ap = this.shadowRoot.getElementById('artwork-picker');
+    ap.value = this._config.artwork_entity || '';
+    if (this._hass) ap.hass = this._hass;
+    ap.addEventListener('value-changed', (e) => {
+      this._config = { ...this._config, artwork_entity: e.detail.value || '' };
       this._fire();
     });
 
