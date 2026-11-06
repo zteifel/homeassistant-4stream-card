@@ -698,27 +698,37 @@ class AsoundMediaCard extends HTMLElement {
     const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
     const gm = mainState?.attributes?.group_members || [];
     const isFollower = gm.length > 1 && gm[0] !== mainEnt;
+    const speakerName = mainState?.attributes?.friendly_name || mainEnt;
+
+    const transferSpotify = () => {
+      if (!artEntId) return;
+      const artEnt = this._hass.states[artEntId];
+      if (!artEnt) return;
+      this._hass.callWS({
+        type: 'call_service',
+        domain: 'media_player',
+        service: 'select_source',
+        target: { entity_id: artEntId },
+        service_data: { source: speakerName },
+      });
+    };
 
     if (isFollower) {
-      this._svc('media_player', 'unjoin', mainEnt);
+      this._hass.callWS({
+        type: 'call_service',
+        domain: 'media_player',
+        service: 'unjoin',
+        target: { entity_id: mainEnt },
+        service_data: {},
+      }).then(() => {
+        setTimeout(transferSpotify, 1500);
+      });
+      return;
     }
 
-    if (artEntId && (!isActive || fromMini || isFollower)) {
-      const artEnt = this._hass.states[artEntId];
-      if (artEnt) {
-        const speakerName = mainState?.attributes?.friendly_name || mainEnt;
-        const delay = isFollower ? 500 : 0;
-        setTimeout(() => {
-          this._hass.callWS({
-            type: 'call_service',
-            domain: 'media_player',
-            service: 'select_source',
-            target: { entity_id: artEntId },
-            service_data: { source: speakerName },
-          });
-        }, delay);
-        return;
-      }
+    if (artEntId && (!isActive || fromMini)) {
+      transferSpotify();
+      return;
     }
 
     this._svc('media_player', 'media_play_pause', mainEnt);
