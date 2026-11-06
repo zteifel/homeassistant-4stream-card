@@ -421,6 +421,13 @@ class AsoundMediaCard extends HTMLElement {
     return ((active && !isFollower) || this._forceExpanded) ? 3 : 1;
   }
 
+  _speakerMatchesSource(speakerName, sourceName) {
+    if (!speakerName || !sourceName) return false;
+    const a = speakerName.toLowerCase();
+    const b = sourceName.toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  }
+
   _getState() {
     const entity = this._hass.states[this._config.entity];
     if (!entity) return null;
@@ -429,8 +436,15 @@ class AsoundMediaCard extends HTMLElement {
     const artEntPic = artEnt?.attributes?.entity_picture;
     const mainId = this._config.entity;
     const speakers = this._config.speakers || [];
+    const speakerName = a.friendly_name || mainId;
+
+    // Check if this speaker is the active Spotify Connect target
+    const spotifySource = artEnt?.attributes?.source || '';
+    const isSpotifyTarget = this._speakerMatchesSource(speakerName, spotifySource);
+    const spotifyPlaying = artEnt?.state === 'playing';
+
+    // LinkPlay group_members (may be empty if grouping is via Spotify Connect)
     const mainGm = a.group_members || [];
-    const isFollower = mainGm.length > 1 && mainGm[0] !== mainId;
     const groupSet = new Set(mainGm);
     for (const spId of speakers) {
       const sp = this._hass.states[spId];
@@ -439,11 +453,17 @@ class AsoundMediaCard extends HTMLElement {
         for (const id of spGm) groupSet.add(id);
       }
     }
-    const groupMembers = mainGm;
 
     let isPlaying = entity.state === 'playing';
     let isPaused = entity.state === 'paused';
     let isActive = isPlaying || isPaused;
+
+    // If this speaker is playing but is NOT the Spotify target, it's a follower
+    const isFollower = isActive && spotifyPlaying && !isSpotifyTarget && !!spotifySource
+      && speakers.some(spId => {
+        const sp = this._hass.states[spId];
+        return this._speakerMatchesSource(sp?.attributes?.friendly_name, spotifySource);
+      });
 
     const pp = this._pendingPlay;
     if (pp && Date.now() - pp.time < 5000) {
@@ -459,14 +479,14 @@ class AsoundMediaCard extends HTMLElement {
 
     return {
       entity, a, isPlaying, isPaused, isActive, isFollower,
-      name: a.friendly_name || this._config.entity,
+      name: speakerName,
       showFull: (isActive && !isFollower) || this._forceExpanded,
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
       artist: a.media_artist || (artEntPic && artEnt?.attributes.media_artist) || '',
       vol: Math.round((a.volume_level || 0) * 100),
       muted: !!a.is_volume_muted,
-      groupMembers, groupSet, speakers,
+      groupMembers: mainGm, groupSet, speakers,
       hasSpeakers: speakers.length > 0,
     };
   }
@@ -723,10 +743,7 @@ class AsoundMediaCard extends HTMLElement {
     const mainState = this._hass.states[mainEnt];
     const realState = mainState?.state;
     const isActive = realState === 'playing' || realState === 'paused';
-    const gm = mainState?.attributes?.group_members || [];
-    const isFollower = gm.length > 1 && gm[0] !== mainEnt;
 
-    // pp button on full player: toggle play/pause directly
     if (!fromMini) {
       if (isActive) {
         this._svc('media_player', 'media_play_pause', mainEnt);
@@ -734,7 +751,6 @@ class AsoundMediaCard extends HTMLElement {
         this._pendingPlay = null;
         this._render();
       } else if (artEntId) {
-        // Idle, try Spotify transfer
         this._pendingPlay = { time: Date.now() };
         this._render();
         this._transferSpotify(artEntId, mainState, mainEnt);
@@ -743,21 +759,11 @@ class AsoundMediaCard extends HTMLElement {
       }
       return;
     }
-    // Mini bar play: unjoin if follower, then transfer Spotify
+
+    // Mini bar play: transfer Spotify to this speaker
     this._pendingPlay = { time: Date.now() };
     this._render();
-
-    if (isFollower) {
-      this._hass.callWS({
-        type: 'call_service',
-        domain: 'media_player',
-        service: 'unjoin',
-        target: { entity_id: mainEnt },
-        service_data: {},
-      }).then(() => {
-        setTimeout(() => this._transferSpotify(artEntId, mainState, mainEnt), 1500);
-      });
-    } else if (artEntId) {
+    if (artEntId) {
       this._transferSpotify(artEntId, mainState, mainEnt);
     } else {
       this._svc('media_player', 'media_play', mainEnt);
