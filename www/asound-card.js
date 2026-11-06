@@ -760,33 +760,25 @@ class AsoundMediaCard extends HTMLElement {
       return;
     }
 
-    // Mini bar play: unjoin from group if needed, then transfer Spotify
+    // Mini bar play: always unjoin first (no-op if not grouped), then transfer
     this._pendingPlay = { time: Date.now() };
     this._render();
-    const gm = mainState?.attributes?.group_members || [];
-    const inGroup = gm.length > 1;
 
-    const doTransfer = () => {
-      if (artEntId) {
-        this._transferSpotify(artEntId, mainState, mainEnt);
-      } else {
-        this._svc('media_player', 'media_play', mainEnt);
-      }
-    };
-
-    if (inGroup) {
-      this._hass.callWS({
-        type: 'call_service',
-        domain: 'media_player',
-        service: 'unjoin',
-        target: { entity_id: mainEnt },
-        service_data: {},
-      }).then(() => {
-        setTimeout(doTransfer, 1500);
-      });
-    } else {
-      doTransfer();
-    }
+    this._hass.callWS({
+      type: 'call_service',
+      domain: 'media_player',
+      service: 'unjoin',
+      target: { entity_id: mainEnt },
+      service_data: {},
+    }).then(() => {
+      setTimeout(() => {
+        if (artEntId) {
+          this._transferSpotify(artEntId, mainState, mainEnt);
+        } else {
+          this._svc('media_player', 'media_play', mainEnt);
+        }
+      }, 1500);
+    });
   }
 
   _transferSpotify(artEntId, mainState, mainEnt) {
