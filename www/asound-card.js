@@ -607,13 +607,16 @@ class AsoundMediaCard extends HTMLElement {
     if (volIcon) volIcon.innerHTML = s.muted ? SVG.volMute : (s.vol > 50 ? SVG.volHi : SVG.volLo);
 
     if (!this._sliderActive) {
-      const mainVol = this._resolveVol(this._config.entity, s.vol);
+      const mainSp = this._hass.states[this._config.entity];
+      const mainHassVol = Math.round((mainSp?.attributes?.volume_level ?? 0) * 100);
+      const mainVol = this._resolveVol(this._config.entity, mainHassVol);
       const volSlider = q('input[data-vol="__group__"]');
       if (volSlider) volSlider.value = mainVol;
       const volVal = q('.vol-val');
       if (volVal) volVal.textContent = mainVol + '%';
 
-      for (const spId of s.speakers) {
+      const allSpeakers = [this._config.entity, ...s.speakers.filter(id => id !== this._config.entity)];
+      for (const spId of allSpeakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
         const hassVol = Math.round((sp.attributes.volume_level ?? 0) * 100);
