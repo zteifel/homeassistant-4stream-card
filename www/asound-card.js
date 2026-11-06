@@ -722,17 +722,15 @@ class AsoundMediaCard extends HTMLElement {
       if (toggle.checked) {
         if (!this._pendingGroup) this._pendingGroup = new Set();
         this._pendingGroup.add(spId);
-        const st = this._hass.states[this._config.entity];
-        const current = st?.attributes?.group_members || [this._config.entity];
-        const members = [...new Set([...current, ...this._pendingGroup])];
         clearTimeout(this._groupJoinTimer);
         this._groupJoinTimer = setTimeout(() => {
+          const st = this._hass.states[this._config.entity];
+          const current = st?.attributes?.group_members || [this._config.entity];
+          const members = [...new Set([...current, ...this._pendingGroup])];
+          this._pendingGroup = null;
           this._svc('media_player', 'join', this._config.entity, { group_members: members });
-          setTimeout(() => {
-            this._svc('media_player', 'media_play', this._config.entity);
-            this._pendingGroup = null;
-          }, 1500);
-        }, 300);
+          setTimeout(() => this._svc('media_player', 'media_play', this._config.entity), 1500);
+        }, 500);
       } else {
         if (this._pendingGroup) this._pendingGroup.delete(spId);
         this._svc('media_player', 'unjoin', spId);
