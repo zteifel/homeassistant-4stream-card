@@ -60,21 +60,21 @@ const STYLES = `
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #fff;
+    color: var(--art-text, #fff);
   }
   .track-artist {
     font-size: 0.85em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255,255,255,0.7);
+    color: var(--art-text-muted, rgba(255,255,255,0.7));
     margin-top: 2px;
   }
   .no-art .track-title { color: var(--primary-text-color); }
   .no-art .track-artist { color: var(--secondary-text-color); }
   .speaker-name {
     font-size: 0.7em;
-    color: rgba(255,255,255,0.45);
+    color: var(--art-text-muted, rgba(255,255,255,0.45));
     white-space: nowrap;
     margin-top: 2px;
   }
@@ -99,10 +99,10 @@ const STYLES = `
     align-items: center;
     justify-content: center;
     padding: 0;
-    color: #fff;
+    color: var(--art-text, #fff);
     transition: background 0.15s;
   }
-  .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+  .ctrl-btn:hover { background: rgba(128,128,128,0.2); }
   .ctrl-btn svg { width: 24px; height: 24px; fill: currentColor; pointer-events: none; }
   .ctrl-btn.play-btn { width: 48px; height: 48px; }
   .ctrl-btn.play-btn svg { width: 32px; height: 32px; }
@@ -120,7 +120,7 @@ const STYLES = `
     padding: 0 16px 12px;
   }
   .vol-icon {
-    color: rgba(255,255,255,0.6);
+    color: var(--art-text-muted, rgba(255,255,255,0.6));
     flex-shrink: 0;
     width: 20px; height: 20px;
     cursor: pointer;
@@ -129,7 +129,7 @@ const STYLES = `
   .no-art .vol-icon { color: var(--secondary-text-color); }
   .vol-val {
     font-size: 0.75em;
-    color: rgba(255,255,255,0.6);
+    color: var(--art-text-muted, rgba(255,255,255,0.6));
     width: 32px;
     text-align: right;
     flex-shrink: 0;
@@ -142,7 +142,7 @@ const STYLES = `
     flex: 1;
     height: 4px;
     border-radius: 2px;
-    background: rgba(255,255,255,0.2);
+    background: rgba(128,128,128,0.3);
     outline: none;
     cursor: pointer;
     min-width: 0;
@@ -752,8 +752,15 @@ class AsoundMediaCard extends HTMLElement {
         g = Math.round(g / count);
         b = Math.round(b / count);
         const color = `rgb(${r},${g},${b})`;
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const textColor = lum > 0.5 ? '#000' : '#fff';
+        const textMuted = lum > 0.5 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';
         const player = this._card?.querySelector('.player');
-        if (player) player.style.setProperty('--art-bg', color);
+        if (player) {
+          player.style.setProperty('--art-bg', color);
+          player.style.setProperty('--art-text', textColor);
+          player.style.setProperty('--art-text-muted', textMuted);
+        }
       } catch(e) {}
     };
     img.src = url;
