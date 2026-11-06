@@ -375,6 +375,7 @@ class AsoundMediaCard extends HTMLElement {
     this._sliderActive = false;
     this._sliderEndTimer = null;
     this._pendingVol = {};
+    this._pendingPlay = null;
     this._built = false;
   }
 
@@ -424,15 +425,29 @@ class AsoundMediaCard extends HTMLElement {
     const entity = this._hass.states[this._config.entity];
     if (!entity) return null;
     const a = entity.attributes;
-    const isPlaying = entity.state === 'playing';
-    const isPaused = entity.state === 'paused';
-    const isActive = isPlaying || isPaused;
     const artEnt = this._config.source_entity && this._hass.states[this._config.source_entity];
     const artEntPic = artEnt?.attributes?.entity_picture;
     const groupMembers = a.group_members || [];
     const groupSet = new Set(groupMembers);
     const isFollower = groupMembers.length > 1 && groupMembers[0] !== this._config.entity;
     const speakers = this._config.speakers || [];
+
+    let isPlaying = entity.state === 'playing';
+    let isPaused = entity.state === 'paused';
+    let isActive = isPlaying || isPaused;
+
+    const pp = this._pendingPlay;
+    if (pp && Date.now() - pp.time < 5000) {
+      if (isActive) {
+        this._pendingPlay = null;
+      } else {
+        isPlaying = true;
+        isActive = true;
+      }
+    } else if (pp) {
+      this._pendingPlay = null;
+    }
+
     return {
       entity, a, isPlaying, isPaused, isActive, isFollower,
       name: a.friendly_name || this._config.entity,
@@ -719,6 +734,8 @@ class AsoundMediaCard extends HTMLElement {
     };
 
     if (isFollower) {
+      this._pendingPlay = { time: Date.now() };
+      this._render();
       this._hass.callWS({
         type: 'call_service',
         domain: 'media_player',
@@ -732,6 +749,8 @@ class AsoundMediaCard extends HTMLElement {
     }
 
     if (artEntId && (!isActive || fromMini)) {
+      this._pendingPlay = { time: Date.now() };
+      this._render();
       transferSpotify();
       return;
     }
