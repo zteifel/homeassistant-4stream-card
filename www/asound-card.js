@@ -21,81 +21,93 @@ const STYLES = `
   }
   .player-bg {
     position: absolute;
-    inset: -24px;
+    inset: 0;
     background-size: cover;
     background-position: center;
     filter: blur(20px) brightness(0.3) saturate(1.3);
+    transform: scale(1.15);
   }
   .player.no-art .player-bg {
     background: var(--card-background-color, #1c1c1c);
     filter: none;
+    transform: none;
   }
   .player-content {
     position: relative;
     z-index: 1;
   }
 
-  /* ── Now playing row ── */
-  .now-playing {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 16px 8px;
+  /* ── Album art hero ── */
+  .art-hero {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    overflow: hidden;
   }
-  .art-thumb {
-    width: 48px;
-    height: 48px;
-    border-radius: 4px;
+  .art-hero img {
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    flex-shrink: 0;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
   }
-  .art-placeholder {
-    width: 48px;
-    height: 48px;
-    border-radius: 4px;
-    flex-shrink: 0;
-    background: rgba(255,255,255,0.1);
+  .art-hero-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, var(--art-bg, rgba(0,0,0,0.85)) 0%, transparent 60%),
+                linear-gradient(to right, transparent 40%, var(--art-bg, rgba(0,0,0,0.85)) 100%);
+  }
+  .art-hero-info {
+    position: absolute;
+    bottom: 10px;
+    right: 12px;
+    text-align: right;
+    max-width: 55%;
+  }
+  .art-placeholder-hero {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    background: rgba(255,255,255,0.04);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: rgba(255,255,255,0.5);
-    font-size: 20px;
+    color: rgba(255,255,255,0.3);
+    font-size: 32px;
   }
-  .no-art .art-placeholder {
+  .no-art .art-placeholder-hero {
     color: var(--secondary-text-color);
-    background: rgba(var(--rgb-primary-text-color, 0,0,0), 0.06);
+    background: rgba(var(--rgb-primary-text-color, 0,0,0), 0.04);
   }
+
+  /* ── Track info ── */
   .track-info {
-    flex: 1;
     min-width: 0;
   }
   .track-title {
-    font-size: 0.95em;
-    font-weight: 500;
+    font-size: 1em;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
   .track-artist {
-    font-size: 0.82em;
+    font-size: 0.85em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255,255,255,0.7);
+    color: rgba(255,255,255,0.8);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
-  .no-art .track-title { color: var(--primary-text-color); }
-  .no-art .track-artist { color: var(--secondary-text-color); }
+  .no-art .track-title { color: var(--primary-text-color); text-shadow: none; }
+  .no-art .track-artist { color: var(--secondary-text-color); text-shadow: none; }
   .speaker-name {
     font-size: 0.7em;
-    color: rgba(255,255,255,0.45);
+    color: rgba(255,255,255,0.5);
     white-space: nowrap;
-    flex-shrink: 0;
-    align-self: flex-start;
-    margin-top: 4px;
+    margin-top: 2px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
-  .no-art .speaker-name { color: var(--secondary-text-color); }
+  .no-art .speaker-name { color: var(--secondary-text-color); text-shadow: none; }
 
   /* ── Transport controls ── */
   .controls {
@@ -543,15 +555,22 @@ class AsoundMediaCard extends HTMLElement {
     html += `<div class="player-bg"></div>`;
     html += `<div class="player-content">`;
 
-    html += `<div class="now-playing">`;
     if (hasArt) {
-      html += `<img class="art-thumb" src="" alt="">`;
+      html += `<div class="art-hero">`;
+      html += `<img class="art-hero-img" src="" alt="">`;
+      html += `<div class="art-hero-gradient"></div>`;
+      html += `<div class="art-hero-info">`;
+      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
+      html += `<div class="speaker-name">${esc(s.name)}</div>`;
+      html += `</div>`;
+      html += `</div>`;
     } else {
-      html += `<div class="art-placeholder">♪</div>`;
+      html += `<div class="art-placeholder-hero">♪</div>`;
+      html += `<div style="padding: 8px 16px 0">`;
+      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
+      html += `<div class="speaker-name">${esc(s.name)}</div>`;
+      html += `</div>`;
     }
-    html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
-    html += `<div class="speaker-name">${esc(s.name)}</div>`;
-    html += `</div>`;
 
     html += `<div class="controls">`;
     html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
@@ -621,8 +640,9 @@ class AsoundMediaCard extends HTMLElement {
     if (s.artUrl) {
       const bg = q('.player-bg');
       if (bg) bg.style.backgroundImage = `url('${s.artUrl}')`;
-      const thumb = q('.art-thumb');
-      if (thumb && thumb.src !== s.artUrl) thumb.src = s.artUrl;
+      const heroImg = q('.art-hero-img');
+      if (heroImg && heroImg.src !== s.artUrl) heroImg.src = s.artUrl;
+      this._extractColor(s.artUrl);
     }
 
     const volIcon = q('.vol-icon');
@@ -747,6 +767,36 @@ class AsoundMediaCard extends HTMLElement {
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 2000);
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 5000);
     });
+  }
+
+  _extractColor(url) {
+    if (this._lastColorUrl === url) return;
+    this._lastColorUrl = url;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 8;
+        canvas.height = 8;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 8, 8);
+        const data = ctx.getImageData(0, 0, 8, 8).data;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+        }
+        r = Math.round(r / count * 0.4);
+        g = Math.round(g / count * 0.4);
+        b = Math.round(b / count * 0.4);
+        const color = `rgb(${r},${g},${b})`;
+        const hero = this._card?.querySelector('.art-hero-gradient');
+        if (hero) hero.style.setProperty('--art-bg', color);
+        const bg = this._card?.querySelector('.player-bg');
+        if (bg) bg.style.background = color;
+      } catch(e) {}
+    };
+    img.src = url;
   }
 
   _resolveVol(entityId, hassVol) {
