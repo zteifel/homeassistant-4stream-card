@@ -710,9 +710,22 @@ class AsoundMediaCard extends HTMLElement {
     const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
-    const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
+    const realPlaying = mainState?.state === 'playing';
+    const realPaused = mainState?.state === 'paused';
+    const isActive = realPlaying || realPaused;
     const gm = mainState?.attributes?.group_members || [];
     const isFollower = gm.length > 1 && gm[0] !== mainEnt;
+
+    if (!fromMini && isActive) {
+      this._svc('media_player', 'media_play_pause', mainEnt);
+      return;
+    }
+
+    if (!fromMini && this._pendingPlay) {
+      this._pendingPlay = null;
+      this._render();
+      return;
+    }
     const speakerName = mainState?.attributes?.friendly_name || mainEnt;
 
     const transferSpotify = () => {
