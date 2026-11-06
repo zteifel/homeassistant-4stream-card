@@ -33,26 +33,34 @@ const STYLES = `
     position: relative;
     width: 100%;
     display: flex;
-  }
-  .art-hero img {
-    width: 50%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    flex-shrink: 0;
-  }
-  .art-hero-fade {
-    flex: 1;
-    min-width: 0;
-    background: linear-gradient(to right, transparent, var(--art-bg, rgba(0,0,0,0.85)) 60%);
-    margin-left: -40%;
-    display: flex;
-    align-items: flex-end;
-    justify-content: flex-end;
-    padding: 12px 16px;
+    min-height: 120px;
   }
   .art-hero-info {
-    text-align: right;
-    max-width: 100%;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 16px;
+    z-index: 1;
+  }
+  .art-hero-img-wrap {
+    position: relative;
+    flex-shrink: 0;
+    width: 45%;
+  }
+  .art-hero-img-wrap img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .art-hero-img-wrap::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, var(--art-bg, #1c1c1c) 0%, transparent 50%);
+    z-index: 1;
   }
   .art-placeholder-hero {
     width: 100%;
@@ -72,32 +80,30 @@ const STYLES = `
     min-width: 0;
   }
   .track-title {
-    font-size: 1em;
+    font-size: 1.05em;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     color: #fff;
-    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
   }
   .track-artist {
     font-size: 0.85em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: rgba(255,255,255,0.8);
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    color: rgba(255,255,255,0.7);
+    margin-top: 2px;
   }
-  .no-art .track-title { color: var(--primary-text-color); text-shadow: none; }
-  .no-art .track-artist { color: var(--secondary-text-color); text-shadow: none; }
+  .no-art .track-title { color: var(--primary-text-color); }
+  .no-art .track-artist { color: var(--secondary-text-color); }
   .speaker-name {
     font-size: 0.7em;
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.45);
     white-space: nowrap;
     margin-top: 2px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
   }
-  .no-art .speaker-name { color: var(--secondary-text-color); text-shadow: none; }
+  .no-art .speaker-name { color: var(--secondary-text-color); }
 
   /* ── Transport controls ── */
   .controls {
@@ -546,18 +552,16 @@ class AsoundMediaCard extends HTMLElement {
 
     if (hasArt) {
       html += `<div class="art-hero">`;
-      html += `<img class="art-hero-img" src="" alt="">`;
-      html += `<div class="art-hero-fade"></div>`;
       html += `<div class="art-hero-info">`;
-      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
       html += `<div class="speaker-name">${esc(s.name)}</div>`;
+      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
       html += `</div>`;
+      html += `<div class="art-hero-img-wrap"><img class="art-hero-img" src="" alt=""></div>`;
       html += `</div>`;
     } else {
-      html += `<div class="art-placeholder-hero">♪</div>`;
-      html += `<div style="padding: 8px 16px 0">`;
-      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
+      html += `<div style="padding: 16px 16px 0">`;
       html += `<div class="speaker-name">${esc(s.name)}</div>`;
+      html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
       html += `</div>`;
     }
 
