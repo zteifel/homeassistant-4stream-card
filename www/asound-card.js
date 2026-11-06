@@ -272,38 +272,40 @@ const STYLES = `
     margin-top: 2px;
   }
 
+  .sp-toggle-placeholder { width: 36px; flex-shrink: 0; }
+
   /* ── Minimized ── */
   .mini-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 8px 12px;
     cursor: pointer;
     transition: background 0.15s;
   }
   .mini-bar:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.03); }
   .mini-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     background: rgba(var(--rgb-primary-color, 255,152,0), 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-color);
-    font-size: 18px;
+    font-size: 14px;
     flex-shrink: 0;
   }
   .mini-thumb {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
     object-fit: cover;
     flex-shrink: 0;
   }
   .mini-info { flex: 1; min-width: 0; }
   .mini-name {
-    font-size: 0.92em;
+    font-size: 0.85em;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -311,7 +313,7 @@ const STYLES = `
     color: var(--primary-text-color);
   }
   .mini-state {
-    font-size: 0.78em;
+    font-size: 0.72em;
     color: var(--secondary-text-color);
     text-transform: capitalize;
   }
@@ -320,7 +322,7 @@ const STYLES = `
     border: none;
     color: var(--primary-text-color);
     cursor: pointer;
-    width: 36px; height: 36px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -328,7 +330,7 @@ const STYLES = `
     padding: 0; flex-shrink: 0;
   }
   .mini-play:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
-  .mini-play svg { width: 20px; height: 20px; fill: currentColor; pointer-events: none; }
+  .mini-play svg { width: 16px; height: 16px; fill: currentColor; pointer-events: none; }
 
   .unavailable-msg {
     padding: 24px 16px;
@@ -489,10 +491,10 @@ class AsoundMediaCard extends HTMLElement {
     }
     html += `</div>`;
 
-    // Volume
+    // Volume (group — applies to all grouped speakers)
     html += `<div class="vol-row">`;
     html += `<span class="vol-icon" data-action="mute">${volIcon}</span>`;
-    html += `<input type="range" min="0" max="100" value="${vol}" data-vol="${this._config.entity}">`;
+    html += `<input type="range" min="0" max="100" value="${vol}" data-vol="__group__">`;
     html += `<span class="vol-val">${vol}%</span>`;
     html += `</div>`;
 
@@ -511,15 +513,20 @@ class AsoundMediaCard extends HTMLElement {
         const isMain = spId === this._config.entity;
 
         html += `<div class="sp-row">`;
-        html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} ${isMain ? 'disabled' : ''} data-group-toggle="${spId}"><span class="sl"></span></label>`;
+        if (isMain) {
+          html += `<div class="sp-toggle-placeholder"></div>`;
+        } else {
+          html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} data-group-toggle="${spId}"><span class="sl"></span></label>`;
+        }
         html += `<div class="sp-info">`;
-        html += `<div class="sp-name ${isMaster ? 'master' : ''}">${esc(spName)}</div>`;
-        html += `<div class="sp-vol-row">`;
-        html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
-        html += `<span class="sp-vol-val">${spVol}%</span>`;
+        html += `<div class="sp-name ${isMain ? 'master' : ''}">${esc(spName)}</div>`;
+        if (inGroup || isMain) {
+          html += `<div class="sp-vol-row">`;
+          html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
+          html += `<span class="sp-vol-val">${spVol}%</span>`;
+          html += `</div>`;
+        }
         html += `</div>`;
-        html += `</div>`;
-        if (isMaster) html += `<span class="sp-badge">master</span>`;
         html += `</div>`;
       }
 
@@ -565,7 +572,15 @@ class AsoundMediaCard extends HTMLElement {
       if (label) label.textContent = val + '%';
       clearTimeout(this._volTimers[eid]);
       this._volTimers[eid] = setTimeout(() => {
-        this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
+        if (eid === '__group__') {
+          const st = this._hass.states[this._config.entity];
+          const members = st?.attributes?.group_members || [this._config.entity];
+          for (const m of members) {
+            this._svc('media_player', 'volume_set', m, { volume_level: val / 100 });
+          }
+        } else {
+          this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
+        }
       }, 150);
     });
 
