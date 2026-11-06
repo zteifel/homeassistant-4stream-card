@@ -443,6 +443,12 @@ class AsoundMediaCard extends HTMLElement {
     const groupSet = new Set(mainGm);
     const isFollower = mainGm.length > 1 && mainGm[0] !== mainId;
 
+    if (this._pendingToggle) {
+      for (const [spId, expected] of Object.entries(this._pendingToggle)) {
+        if (expected === groupSet.has(spId)) delete this._pendingToggle[spId];
+      }
+    }
+
     // Check source entity (Spotify) to see if it's targeting this speaker
     const srcSource = artEnt?.attributes?.source || '';
     const srcState = artEnt?.state;
@@ -735,7 +741,9 @@ class AsoundMediaCard extends HTMLElement {
       }
       setTimeout(() => {
         if (this._pendingToggle) delete this._pendingToggle[spId];
-      }, 5000);
+        this._lastRenderKey = null;
+        this._render();
+      }, 30000);
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 2000);
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 5000);
     });
