@@ -1,0 +1,182 @@
+# ══════════════════════════════════════════════════════════════════
+# ASound — 4stream / LinkPlay speaker group management
+# ══════════════════════════════════════════════════════════════════
+#
+# SETUP
+# 1. Replace every media_player.speaker_N below with your real
+#    entity IDs. Find them at:
+#    Settings → Devices & Services → LinkPlay → (device) → Entity ID
+#
+#    Example: media_player.speaker_1 → media_player.linkplay_living_room
+#
+# 2. Update the friendly names on the input_booleans to match.
+#
+# 3. In asound_group_default, keep only the 3 speakers you normally
+#    group together (or remove the script if you don't need a preset).
+#
+# 4. Copy this file to <ha-config>/packages/asound.yaml
+#
+# 5. Make sure packages are enabled in configuration.yaml:
+#      homeassistant:
+#        packages: !include_dir_named packages
+#
+# 6. Restart Home Assistant.
+# ══════════════════════════════════════════════════════════════════
+
+
+# ─── Toggles for the "Build Custom Group" panel ───
+
+input_boolean:
+  asound_speaker_1:
+    name: "Speaker 1"
+    icon: mdi:speaker
+  asound_speaker_2:
+    name: "Speaker 2"
+    icon: mdi:speaker
+  asound_speaker_3:
+    name: "Speaker 3"
+    icon: mdi:speaker
+  asound_speaker_4:
+    name: "Speaker 4"
+    icon: mdi:speaker
+  asound_speaker_5:
+    name: "Speaker 5"
+    icon: mdi:speaker
+  asound_speaker_6:
+    name: "Speaker 6"
+    icon: mdi:speaker
+
+
+# ─── Scripts ───
+
+script:
+  asound_group_all:
+    alias: "ASound: Group All Speakers"
+    icon: mdi:speaker-group
+    mode: single
+    sequence:
+      - action: media_player.join
+        target:
+          entity_id: media_player.speaker_1
+        data:
+          group_members:
+            - media_player.speaker_1
+            - media_player.speaker_2
+            - media_player.speaker_3
+            - media_player.speaker_4
+            - media_player.speaker_5
+            - media_player.speaker_6
+
+  asound_ungroup_all:
+    alias: "ASound: Ungroup All Speakers"
+    icon: mdi:speaker-off
+    mode: single
+    sequence:
+      - action: media_player.unjoin
+        target:
+          entity_id:
+            - media_player.speaker_1
+            - media_player.speaker_2
+            - media_player.speaker_3
+            - media_player.speaker_4
+            - media_player.speaker_5
+            - media_player.speaker_6
+
+  # Preset: your 3 default-grouped speakers.
+  # Edit the entity list to match your actual default group.
+  asound_group_default:
+    alias: "ASound: Default Group"
+    icon: mdi:home
+    mode: single
+    sequence:
+      - action: media_player.join
+        target:
+          entity_id: media_player.speaker_1
+        data:
+          group_members:
+            - media_player.speaker_1
+            - media_player.speaker_2
+            - media_player.speaker_3
+
+  asound_apply_group:
+    alias: "ASound: Apply Custom Group"
+    icon: mdi:check-circle
+    mode: single
+    sequence:
+      - variables:
+          members: >-
+            {% set ns = namespace(l=[]) %}
+            {% set pairs = [
+              ('input_boolean.asound_speaker_1', 'media_player.speaker_1'),
+              ('input_boolean.asound_speaker_2', 'media_player.speaker_2'),
+              ('input_boolean.asound_speaker_3', 'media_player.speaker_3'),
+              ('input_boolean.asound_speaker_4', 'media_player.speaker_4'),
+              ('input_boolean.asound_speaker_5', 'media_player.speaker_5'),
+              ('input_boolean.asound_speaker_6', 'media_player.speaker_6'),
+            ] %}
+            {% for ib, mp in pairs %}
+              {% if is_state(ib, 'on') %}
+                {% set ns.l = ns.l + [mp] %}
+              {% endif %}
+            {% endfor %}
+            {{ ns.l }}
+      - choose:
+          - conditions:
+              - condition: template
+                value_template: "{{ members | length >= 2 }}"
+            sequence:
+              - action: media_player.join
+                target:
+                  entity_id: "{{ members[0] }}"
+                data:
+                  group_members: "{{ members }}"
+        default:
+          - action: persistent_notification.create
+            data:
+              title: "ASound"
+              message: "Select at least 2 speakers to create a group."
+
+  asound_reset_toggles:
+    alias: "ASound: Reset Toggles"
+    icon: mdi:restore
+    mode: single
+    sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id:
+            - input_boolean.asound_speaker_1
+            - input_boolean.asound_speaker_2
+            - input_boolean.asound_speaker_3
+            - input_boolean.asound_speaker_4
+            - input_boolean.asound_speaker_5
+            - input_boolean.asound_speaker_6
+
+
+# ─── Group status sensor (shows active groups in the dashboard) ───
+
+template:
+  - sensor:
+      - name: "ASound Group Status"
+        unique_id: asound_group_status
+        icon: mdi:speaker-group
+        state: >-
+          {% set ns = namespace(groups=[], seen=[]) %}
+          {% set all = [
+            'media_player.speaker_1',
+            'media_player.speaker_2',
+            'media_player.speaker_3',
+            'media_player.speaker_4',
+            'media_player.speaker_5',
+            'media_player.speaker_6',
+          ] %}
+          {% for eid in all %}
+            {% if eid not in ns.seen %}
+              {% set gm = state_attr(eid, 'group_members') %}
+              {% if gm and gm | length > 1 %}
+                {% set master_name = state_attr(gm[0], 'friendly_name') or gm[0] %}
+                {% set ns.groups = ns.groups + [master_name ~ ' + ' ~ (gm|length - 1)|string] %}
+                {% set ns.seen = ns.seen + gm %}
+              {% endif %}
+            {% endif %}
+          {% endfor %}
+          {{ ns.groups | join(' · ') if ns.groups else 'No active groups' }}

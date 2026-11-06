@@ -1,0 +1,166 @@
+# ══════════════════════════════════════════════════════════════════
+# ASound Dashboard — Lovelace config for 4stream speaker control
+# ══════════════════════════════════════════════════════════════════
+#
+# SETUP
+# 1. Replace every media_player.speaker_N with your real entity IDs
+#    (same ones you used in packages/asound.yaml).
+#
+# 2. Update the "name:" fields on input_booleans and media-control
+#    cards to match your room names.
+#
+# HOW TO INSTALL (pick one):
+#
+#   Option A — New dashboard (recommended):
+#     1. Settings → Dashboards → Add Dashboard
+#     2. Name it "ASound", pick an icon (mdi:speaker-group)
+#     3. Open the new dashboard, click ⋮ → Edit → ⋮ → Raw configuration editor
+#     4. Paste the contents below (starting from "views:")
+#     5. Save
+#
+#   Option B — Add to existing dashboard:
+#     1. Open your dashboard, ⋮ → Edit → ⋮ → Raw configuration editor
+#     2. Append the view block (the "- title: ASound" section)
+#        under the existing "views:" key
+#     3. Save
+# ══════════════════════════════════════════════════════════════════
+
+views:
+  - title: ASound
+    path: asound
+    icon: mdi:speaker-group
+    cards:
+
+      # ────────────────────────────────────────
+      # Group Status
+      # ────────────────────────────────────────
+      - type: entities
+        entities:
+          - entity: sensor.asound_group_status
+            name: Active Groups
+            icon: mdi:speaker-group
+
+      # ────────────────────────────────────────
+      # Quick Group Presets
+      # ────────────────────────────────────────
+      - type: horizontal-stack
+        cards:
+          - type: button
+            name: Group All
+            icon: mdi:speaker-group
+            icon_height: 30px
+            tap_action:
+              action: perform-action
+              perform_action: script.asound_group_all
+          - type: button
+            name: Default
+            icon: mdi:home
+            icon_height: 30px
+            tap_action:
+              action: perform-action
+              perform_action: script.asound_group_default
+          - type: button
+            name: Ungroup All
+            icon: mdi:speaker-off
+            icon_height: 30px
+            tap_action:
+              action: perform-action
+              perform_action: script.asound_ungroup_all
+
+      # ────────────────────────────────────────
+      # Build Custom Group
+      # ────────────────────────────────────────
+      - type: entities
+        title: Build Custom Group
+        show_header_toggle: false
+        entities:
+          - entity: input_boolean.asound_speaker_1
+            name: Speaker 1
+          - entity: input_boolean.asound_speaker_2
+            name: Speaker 2
+          - entity: input_boolean.asound_speaker_3
+            name: Speaker 3
+          - entity: input_boolean.asound_speaker_4
+            name: Speaker 4
+          - entity: input_boolean.asound_speaker_5
+            name: Speaker 5
+          - entity: input_boolean.asound_speaker_6
+            name: Speaker 6
+      - type: horizontal-stack
+        cards:
+          - type: button
+            name: Apply Group
+            icon: mdi:check-circle
+            icon_height: 26px
+            tap_action:
+              action: perform-action
+              perform_action: script.asound_apply_group
+          - type: button
+            name: Reset
+            icon: mdi:restore
+            icon_height: 26px
+            tap_action:
+              action: perform-action
+              perform_action: script.asound_reset_toggles
+
+      # ────────────────────────────────────────
+      # Speaker Controls
+      # ────────────────────────────────────────
+
+      - type: media-control
+        entity: media_player.speaker_1
+
+      - type: media-control
+        entity: media_player.speaker_2
+
+      - type: media-control
+        entity: media_player.speaker_3
+
+      - type: media-control
+        entity: media_player.speaker_4
+
+      - type: media-control
+        entity: media_player.speaker_5
+
+      - type: media-control
+        entity: media_player.speaker_6
+
+
+# ══════════════════════════════════════════════════════════════════
+# OPTIONAL UPGRADE: Mini Media Player (via HACS)
+# ══════════════════════════════════════════════════════════════════
+#
+# Mini Media Player adds built-in speaker group toggles directly
+# on each card — no separate "Build Group" panel needed.
+#
+# Install: HACS → Frontend → search "Mini Media Player" → Install
+#
+# Then replace each media-control card above with:
+#
+#   - type: custom:mini-media-player
+#     entity: media_player.speaker_1
+#     name: Living Room
+#     group: true
+#     artwork: cover
+#     source: icon
+#     info: scroll
+#     sound_mode: icon
+#     speaker_group:
+#       show_group_count: true
+#       entities:
+#         - entity_id: media_player.speaker_1
+#           name: Living Room
+#         - entity_id: media_player.speaker_2
+#           name: Kitchen
+#         - entity_id: media_player.speaker_3
+#           name: Dining Room
+#         - entity_id: media_player.speaker_4
+#           name: Bedroom
+#         - entity_id: media_player.speaker_5
+#           name: Bathroom
+#         - entity_id: media_player.speaker_6
+#           name: Office
+#
+# Each card then shows toggle switches to group/ungroup speakers
+# directly, making the "Build Custom Group" section unnecessary.
+# ══════════════════════════════════════════════════════════════════
