@@ -23,6 +23,10 @@ const STYLES = `
   .player.no-art {
     background: var(--card-background-color, #1c1c1c);
   }
+  .player-main {
+    position: relative;
+    overflow: hidden;
+  }
   .player-content {
     position: relative;
     z-index: 2;
@@ -507,6 +511,14 @@ class AsoundMediaCard extends HTMLElement {
     if (key !== this._lastRenderKey) {
       this._lastRenderKey = key;
       this._rebuild(s);
+      if (this._lastArtColor) {
+        const player = this._card.querySelector('.player');
+        if (player) {
+          player.style.setProperty('--art-bg', this._lastArtColor.bg);
+          player.style.setProperty('--art-text', this._lastArtColor.text);
+          player.style.setProperty('--art-text-muted', this._lastArtColor.muted);
+        }
+      }
     }
     this._updateValues(s);
   }
@@ -529,6 +541,7 @@ class AsoundMediaCard extends HTMLElement {
     const speakers = s.speakers;
     let html = `<div class="player ${hasArt ? '' : 'no-art'}">`;
 
+    html += `<div class="player-main">`;
     if (hasArt) {
       html += `<img class="art-bg-img" src="" alt="">`;
       html += `<div class="art-bg-fade"></div>`;
@@ -555,6 +568,8 @@ class AsoundMediaCard extends HTMLElement {
     html += `<input type="range" min="0" max="100" value="0" data-vol="__group__">`;
     html += `<span class="vol-val"></span>`;
     html += `</div>`;
+
+    html += `</div></div>`;
 
     if (s.hasSpeakers) {
       const panelH = this._spPanelOpen ? (speakers.length * 52 + 20) : 0;
@@ -583,7 +598,7 @@ class AsoundMediaCard extends HTMLElement {
       html += `</div>`;
     }
 
-    html += `</div></div>`;
+    html += `</div>`;
     this._card.innerHTML = html;
   }
 
@@ -785,6 +800,7 @@ class AsoundMediaCard extends HTMLElement {
       textColor = bgLum > 0.45 ? '#000' : '#fff';
     }
 
+    this._lastArtColor = { bg: bgColor, text: textColor, muted: textColor };
     const player = this._card?.querySelector('.player');
     if (player) {
       player.style.setProperty('--art-bg', bgColor);
