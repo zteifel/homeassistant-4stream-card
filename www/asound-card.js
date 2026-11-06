@@ -403,8 +403,12 @@ class AsoundMediaCard extends HTMLElement {
   getCardSize() {
     if (!this._hass) return 1;
     const entity = this._hass.states[this._config?.entity];
-    const active = entity && (entity.state === 'playing' || entity.state === 'paused');
-    return (active || this._forceExpanded) ? 3 : 1;
+    if (!entity) return 1;
+    const a = entity.attributes;
+    const active = entity.state === 'playing' || entity.state === 'paused';
+    const gm = a.group_members || [];
+    const isFollower = gm.length > 1 && gm[0] !== this._config.entity;
+    return ((active && !isFollower) || this._forceExpanded) ? 3 : 1;
   }
 
   _getState() {
@@ -418,11 +422,12 @@ class AsoundMediaCard extends HTMLElement {
     const artEntPic = artEnt?.attributes?.entity_picture;
     const groupMembers = a.group_members || [];
     const groupSet = new Set(groupMembers);
+    const isFollower = groupMembers.length > 1 && groupMembers[0] !== this._config.entity;
     const speakers = this._config.speakers || [];
     return {
-      entity, a, isPlaying, isPaused, isActive,
+      entity, a, isPlaying, isPaused, isActive, isFollower,
       name: a.friendly_name || this._config.entity,
-      showFull: isActive || this._forceExpanded,
+      showFull: (isActive && !isFollower) || this._forceExpanded,
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
       artist: a.media_artist || (artEntPic && artEnt?.attributes.media_artist) || '',
