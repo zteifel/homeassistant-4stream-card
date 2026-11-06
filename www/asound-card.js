@@ -612,7 +612,8 @@ class AsoundMediaCard extends HTMLElement {
       if (eid === '__group__' && !this._groupVolStart) {
         const st = this._hass.states[this._config.entity];
         const members = st?.attributes?.group_members || [this._config.entity];
-        this._groupVolStart = { slider: val, members: [...members] };
+        const mainVol = Math.round((st?.attributes?.volume_level || 0) * 100);
+        this._groupVolStart = { slider: mainVol, members: [...members] };
         for (const m of members) {
           const ms = this._hass.states[m];
           this._groupVolStart[m] = Math.round((ms?.attributes?.volume_level || 0) * 100);
@@ -674,7 +675,13 @@ class AsoundMediaCard extends HTMLElement {
   }
 
   _svc(domain, service, eid, data = {}) {
-    this._hass.callService(domain, service, { entity_id: eid, ...data });
+    this._hass.callWS({
+      type: 'call_service',
+      domain,
+      service,
+      target: { entity_id: eid },
+      service_data: data,
+    });
   }
 }
 
