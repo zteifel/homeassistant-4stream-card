@@ -550,7 +550,9 @@ class AsoundMediaCard extends HTMLElement {
     if (s.hasSpeakers) {
       const panelH = this._spPanelOpen ? (speakers.length * 52 + 20) : 0;
       html += `<div class="sp-panel ${this._spPanelOpen ? 'open' : ''}" style="max-height:${panelH}px">`;
-      for (const spId of speakers) {
+      const mainEnt = this._config.entity;
+      const orderedSpeakers = [mainEnt, ...speakers.filter(id => id !== mainEnt)];
+      for (const spId of orderedSpeakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
         html += `<div class="sp-row" data-sp="${spId}">`;
