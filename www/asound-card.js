@@ -602,7 +602,7 @@ class AsoundMediaCard extends HTMLElement {
 
     if (s.artUrl) {
       const bgImg = q('.art-bg-img');
-      if (bgImg && bgImg.src !== s.artUrl) bgImg.src = s.artUrl;
+      if (bgImg) bgImg.src = s.artUrl;
       this._extractColor(s.artUrl);
     }
 
@@ -641,8 +641,8 @@ class AsoundMediaCard extends HTMLElement {
         this._handlePlay(action === 'play');
       }
       else if (action === 'expand') { this._forceExpanded = true; this._render(); }
-      else if (action === 'next') this._svc('media_player', 'media_next_track', this._config.entity);
-      else if (action === 'prev') this._svc('media_player', 'media_previous_track', this._config.entity);
+      else if (action === 'next') this._svc('media_player', 'media_next_track', this._config.source_entity || this._config.entity);
+      else if (action === 'prev') this._svc('media_player', 'media_previous_track', this._config.source_entity || this._config.entity);
       else if (action === 'mute') {
         const st = this._hass.states[this._config.entity];
         this._svc('media_player', 'volume_mute', this._config.entity, { is_volume_muted: !st?.attributes?.is_volume_muted });
