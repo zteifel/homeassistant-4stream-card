@@ -608,25 +608,27 @@ class AsoundMediaCard extends HTMLElement {
       const val = parseInt(slider.value);
       const label = slider.nextElementSibling;
       if (label) label.textContent = val + '%';
+
+      if (eid === '__group__' && !this._groupVolStart) {
+        const st = this._hass.states[this._config.entity];
+        const members = st?.attributes?.group_members || [this._config.entity];
+        this._groupVolStart = { slider: val, members: [...members] };
+        for (const m of members) {
+          const ms = this._hass.states[m];
+          this._groupVolStart[m] = Math.round((ms?.attributes?.volume_level || 0) * 100);
+        }
+      }
+
       clearTimeout(this._volTimers[eid]);
       this._volTimers[eid] = setTimeout(() => {
-        if (eid === '__group__') {
-          const st = this._hass.states[this._config.entity];
-          const members = st?.attributes?.group_members || [this._config.entity];
-          if (!this._groupVolStart) {
-            this._groupVolStart = { slider: val };
-            for (const m of members) {
-              const ms = this._hass.states[m];
-              this._groupVolStart[m] = Math.round((ms?.attributes?.volume_level || 0) * 100);
-            }
-          }
+        if (eid === '__group__' && this._groupVolStart) {
           const delta = val - this._groupVolStart.slider;
-          for (const m of members) {
+          for (const m of this._groupVolStart.members) {
             const base = this._groupVolStart[m] ?? val;
             const nv = Math.max(0, Math.min(100, base + delta));
             this._svc('media_player', 'volume_set', m, { volume_level: nv / 100 });
           }
-        } else {
+        } else if (eid !== '__group__') {
           this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
         }
       }, 150);
