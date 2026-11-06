@@ -467,6 +467,19 @@ class AsoundMediaCard extends HTMLElement {
       this._pendingPlay = null;
     }
 
+    // Optimistic play/pause toggle
+    const ppp = this._pendingPP;
+    if (ppp && Date.now() - ppp.time < 3000) {
+      if ((ppp.playing && entity.state === 'playing') || (!ppp.playing && entity.state !== 'playing')) {
+        this._pendingPP = null;
+      } else {
+        isPlaying = ppp.playing;
+        isPaused = !ppp.playing;
+      }
+    } else if (ppp) {
+      this._pendingPP = null;
+    }
+
     return {
       entity, a, isPlaying, isPaused, isActive, isFollower, srcActive,
       name: speakerName,
@@ -732,6 +745,11 @@ class AsoundMediaCard extends HTMLElement {
     return p.value;
   }
 
+  _isCurrentlyPlaying() {
+    const s = this._getState();
+    return s ? s.isPlaying : false;
+  }
+
   _handlePlay(fromMini) {
     const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
@@ -749,6 +767,8 @@ class AsoundMediaCard extends HTMLElement {
     if (!fromMini) {
       if (isActive && srcTargetsMe) {
         // This speaker is the active Spotify target — toggle play/pause
+        this._pendingPP = { playing: !this._isCurrentlyPlaying(), time: Date.now() };
+        this._render();
         this._svc('media_player', 'media_play_pause', ppTarget);
       } else if (isActive && artEntId) {
         // Playing but NOT the Spotify target — unjoin and take over
@@ -761,6 +781,8 @@ class AsoundMediaCard extends HTMLElement {
           setTimeout(() => this._transferSpotify(artEntId, mainState, mainEnt), 1500);
         });
       } else if (isActive) {
+        this._pendingPP = { playing: !this._isCurrentlyPlaying(), time: Date.now() };
+        this._render();
         this._svc('media_player', 'media_play_pause', mainEnt);
       } else if (this._pendingPlay) {
         this._pendingPlay = null;
