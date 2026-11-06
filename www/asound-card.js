@@ -571,7 +571,8 @@ class AsoundMediaCard extends HTMLElement {
         const sp = this._hass.states[spId];
         if (!sp) continue;
         const isMain = spId === mainEnt;
-        const inGroup = s.groupSet.has(spId);
+        const pending = this._pendingToggle?.[spId];
+        const inGroup = pending != null ? pending : s.groupSet.has(spId);
         html += `<div class="sp-row" data-sp="${spId}">`;
         if (isMain) {
           html += `<div class="sp-toggle-placeholder"></div>`;
@@ -719,6 +720,10 @@ class AsoundMediaCard extends HTMLElement {
       const toggle = e.target.closest('input[data-group-toggle]');
       if (!toggle) return;
       const spId = toggle.dataset.groupToggle;
+      if (!this._pendingToggle) this._pendingToggle = {};
+      this._pendingToggle[spId] = toggle.checked;
+      this._lastRenderKey = null;
+      this._render();
       if (toggle.checked) {
         const st = this._hass.states[this._config.entity];
         const current = st?.attributes?.group_members || [this._config.entity];
@@ -728,6 +733,9 @@ class AsoundMediaCard extends HTMLElement {
       } else {
         this._svc('media_player', 'unjoin', spId);
       }
+      setTimeout(() => {
+        if (this._pendingToggle) delete this._pendingToggle[spId];
+      }, 5000);
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 2000);
       setTimeout(() => { this._lastRenderKey = null; this._render(); }, 5000);
     });
