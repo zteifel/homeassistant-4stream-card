@@ -18,19 +18,10 @@ const STYLES = `
   .player {
     position: relative;
     overflow: hidden;
+    background: var(--art-bg, #1c1c1c);
   }
-  .player-bg {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    filter: blur(20px) brightness(0.3) saturate(1.3);
-    transform: scale(1.15);
-  }
-  .player.no-art .player-bg {
+  .player.no-art {
     background: var(--card-background-color, #1c1c1c);
-    filter: none;
-    transform: none;
   }
   .player-content {
     position: relative;
@@ -41,31 +32,31 @@ const STYLES = `
   .art-hero {
     position: relative;
     width: 100%;
-    aspect-ratio: 16 / 7;
-    overflow: hidden;
+    display: flex;
   }
   .art-hero img {
-    width: 100%;
-    height: 100%;
+    width: 50%;
+    aspect-ratio: 1;
     object-fit: cover;
+    flex-shrink: 0;
   }
-  .art-hero-gradient {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(to top, var(--art-bg, rgba(0,0,0,0.85)) 0%, transparent 60%),
-                linear-gradient(to right, transparent 40%, var(--art-bg, rgba(0,0,0,0.85)) 100%);
+  .art-hero-fade {
+    flex: 1;
+    min-width: 0;
+    background: linear-gradient(to right, transparent, var(--art-bg, rgba(0,0,0,0.85)) 60%);
+    margin-left: -40%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: 12px 16px;
   }
   .art-hero-info {
-    position: absolute;
-    bottom: 10px;
-    right: 12px;
     text-align: right;
-    max-width: 55%;
+    max-width: 100%;
   }
   .art-placeholder-hero {
     width: 100%;
-    aspect-ratio: 16 / 7;
-    background: rgba(255,255,255,0.04);
+    padding: 24px 16px 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -74,7 +65,6 @@ const STYLES = `
   }
   .no-art .art-placeholder-hero {
     color: var(--secondary-text-color);
-    background: rgba(var(--rgb-primary-text-color, 0,0,0), 0.04);
   }
 
   /* ── Track info ── */
@@ -552,13 +542,12 @@ class AsoundMediaCard extends HTMLElement {
     const hasArt = !!s.artUrl;
     const speakers = s.speakers;
     let html = `<div class="player ${hasArt ? '' : 'no-art'}">`;
-    html += `<div class="player-bg"></div>`;
     html += `<div class="player-content">`;
 
     if (hasArt) {
       html += `<div class="art-hero">`;
       html += `<img class="art-hero-img" src="" alt="">`;
-      html += `<div class="art-hero-gradient"></div>`;
+      html += `<div class="art-hero-fade"></div>`;
       html += `<div class="art-hero-info">`;
       html += `<div class="track-info"><div class="track-title"></div><div class="track-artist"></div></div>`;
       html += `<div class="speaker-name">${esc(s.name)}</div>`;
@@ -638,8 +627,6 @@ class AsoundMediaCard extends HTMLElement {
     if (ppBtn) ppBtn.innerHTML = s.isPlaying ? SVG.pause : SVG.play;
 
     if (s.artUrl) {
-      const bg = q('.player-bg');
-      if (bg) bg.style.backgroundImage = `url('${s.artUrl}')`;
       const heroImg = q('.art-hero-img');
       if (heroImg && heroImg.src !== s.artUrl) heroImg.src = s.artUrl;
       this._extractColor(s.artUrl);
@@ -790,10 +777,8 @@ class AsoundMediaCard extends HTMLElement {
         g = Math.round(g / count * 0.4);
         b = Math.round(b / count * 0.4);
         const color = `rgb(${r},${g},${b})`;
-        const hero = this._card?.querySelector('.art-hero-gradient');
-        if (hero) hero.style.setProperty('--art-bg', color);
-        const bg = this._card?.querySelector('.player-bg');
-        if (bg) bg.style.background = color;
+        const player = this._card?.querySelector('.player');
+        if (player) player.style.setProperty('--art-bg', color);
       } catch(e) {}
     };
     img.src = url;
