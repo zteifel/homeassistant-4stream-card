@@ -736,33 +736,45 @@ class AsoundMediaCard extends HTMLElement {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 8;
+      canvas.height = 8;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, 8, 8);
+      let r, g, b;
       try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 8;
-        canvas.height = 8;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 8, 8);
         const data = ctx.getImageData(0, 0, 8, 8).data;
-        let r = 0, g = 0, b = 0, count = 0;
+        let tr = 0, tg = 0, tb = 0, count = 0;
         for (let i = 0; i < data.length; i += 4) {
-          r += data[i]; g += data[i+1]; b += data[i+2]; count++;
+          tr += data[i]; tg += data[i+1]; tb += data[i+2]; count++;
         }
-        r = Math.round(r / count);
-        g = Math.round(g / count);
-        b = Math.round(b / count);
-        const color = `rgb(${r},${g},${b})`;
-        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-        const textColor = lum > 0.5 ? '#000' : '#fff';
-        const textMuted = lum > 0.5 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.7)';
-        const player = this._card?.querySelector('.player');
-        if (player) {
-          player.style.setProperty('--art-bg', color);
-          player.style.setProperty('--art-text', textColor);
-          player.style.setProperty('--art-text-muted', textMuted);
-        }
-      } catch(e) {}
+        r = Math.round(tr / count);
+        g = Math.round(tg / count);
+        b = Math.round(tb / count);
+      } catch(e) {
+        r = 80; g = 80; b = 80;
+      }
+      this._applyColor(r, g, b);
     };
+    img.onerror = () => this._applyColor(80, 80, 80);
     img.src = url;
+  }
+
+  _applyColor(r, g, b) {
+    const boost = 1.15;
+    r = Math.min(255, Math.round(r * boost));
+    g = Math.min(255, Math.round(g * boost));
+    b = Math.min(255, Math.round(b * boost));
+    const color = `rgb(${r},${g},${b})`;
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    const textColor = lum > 0.45 ? '#000' : '#fff';
+    const textMuted = lum > 0.45 ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.7)';
+    const player = this._card?.querySelector('.player');
+    if (player) {
+      player.style.setProperty('--art-bg', color);
+      player.style.setProperty('--art-text', textColor);
+      player.style.setProperty('--art-text-muted', textMuted);
+    }
   }
 
   _resolveVol(entityId, hassVol) {
