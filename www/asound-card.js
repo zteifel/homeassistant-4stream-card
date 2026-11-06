@@ -429,9 +429,9 @@ class AsoundMediaCard extends HTMLElement {
     const artEntPic = artEnt?.attributes?.entity_picture;
     const mainId = this._config.entity;
     const speakers = this._config.speakers || [];
-    const groupSet = new Set();
     const mainGm = a.group_members || [];
-    for (const id of mainGm) groupSet.add(id);
+    const isFollower = mainGm.length > 1 && mainGm[0] !== mainId;
+    const groupSet = new Set(mainGm);
     for (const spId of speakers) {
       const sp = this._hass.states[spId];
       const spGm = sp?.attributes?.group_members || [];
@@ -439,8 +439,7 @@ class AsoundMediaCard extends HTMLElement {
         for (const id of spGm) groupSet.add(id);
       }
     }
-    const groupMembers = [...groupSet];
-    const isFollower = groupMembers.length > 1 && groupMembers[0] !== mainId;
+    const groupMembers = mainGm;
 
     let isPlaying = entity.state === 'playing';
     let isPaused = entity.state === 'paused';
@@ -722,45 +721,33 @@ class AsoundMediaCard extends HTMLElement {
     const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
-    const realPlaying = mainState?.state === 'playing';
-    const realPaused = mainState?.state === 'paused';
-    const isActive = realPlaying || realPaused;
+    const realState = mainState?.state;
+    const isActive = realState === 'playing' || realState === 'paused';
     const gm = mainState?.attributes?.group_members || [];
     const isFollower = gm.length > 1 && gm[0] !== mainEnt;
 
-    if (!fromMini && isActive) {
-      this._svc('media_player', 'media_play_pause', mainEnt);
+    // pp button on full player: toggle play/pause directly
+    if (!fromMini) {
+      if (isActive) {
+        this._svc('media_player', 'media_play_pause', mainEnt);
+      } else if (this._pendingPlay) {
+        this._pendingPlay = null;
+        this._render();
+      } else if (artEntId) {
+        // Idle, try Spotify transfer
+        this._pendingPlay = { time: Date.now() };
+        this._render();
+        this._transferSpotify(artEntId, mainState, mainEnt);
+      } else {
+        this._svc('media_player', 'media_play', mainEnt);
+      }
       return;
     }
-
-    if (!fromMini && this._pendingPlay) {
-      this._pendingPlay = null;
-      this._render();
-      return;
-    }
-    const speakerName = mainState?.attributes?.friendly_name || mainEnt;
-
-    const transferSpotify = () => {
-      if (!artEntId) return;
-      const artEnt = this._hass.states[artEntId];
-      if (!artEnt) return;
-      const sources = artEnt.attributes.source_list || [];
-      const match = sources.find(s => s.toLowerCase() === speakerName.toLowerCase())
-        || sources.find(s => speakerName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(speakerName.toLowerCase()));
-      const source = match || speakerName;
-      console.log('[ASound] select_source:', { entity: artEntId, source, speakerName, available: sources });
-      this._hass.callWS({
-        type: 'call_service',
-        domain: 'media_player',
-        service: 'select_source',
-        target: { entity_id: artEntId },
-        service_data: { source },
-      });
-    };
+    // Mini bar play: unjoin if follower, then transfer Spotify
+    this._pendingPlay = { time: Date.now() };
+    this._render();
 
     if (isFollower) {
-      this._pendingPlay = { time: Date.now() };
-      this._render();
       this._hass.callWS({
         type: 'call_service',
         domain: 'media_player',
@@ -768,19 +755,32 @@ class AsoundMediaCard extends HTMLElement {
         target: { entity_id: mainEnt },
         service_data: {},
       }).then(() => {
-        setTimeout(transferSpotify, 1500);
+        setTimeout(() => this._transferSpotify(artEntId, mainState, mainEnt), 1500);
       });
-      return;
+    } else if (artEntId) {
+      this._transferSpotify(artEntId, mainState, mainEnt);
+    } else {
+      this._svc('media_player', 'media_play', mainEnt);
     }
+  }
 
-    if (artEntId && (!isActive || fromMini)) {
-      this._pendingPlay = { time: Date.now() };
-      this._render();
-      transferSpotify();
-      return;
-    }
-
-    this._svc('media_player', 'media_play_pause', mainEnt);
+  _transferSpotify(artEntId, mainState, mainEnt) {
+    if (!artEntId) return;
+    const artEnt = this._hass.states[artEntId];
+    if (!artEnt) return;
+    const speakerName = mainState?.attributes?.friendly_name || mainEnt;
+    const sources = artEnt.attributes.source_list || [];
+    const match = sources.find(s => s.toLowerCase() === speakerName.toLowerCase())
+      || sources.find(s => speakerName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(speakerName.toLowerCase()));
+    const source = match || speakerName;
+    console.log('[ASound] select_source:', { entity: artEntId, source, speakerName, available: sources });
+    this._hass.callWS({
+      type: 'call_service',
+      domain: 'media_player',
+      service: 'select_source',
+      target: { entity_id: artEntId },
+      service_data: { source },
+    });
   }
 
   _svc(domain, service, eid, data = {}) {
