@@ -106,9 +106,9 @@ const STYLES = `
   .ctrl-btn svg { width: 28px; height: 28px; fill: currentColor; pointer-events: none; }
   .ctrl-btn.play-btn { width: 56px; height: 56px; }
   .ctrl-btn.play-btn svg { width: 38px; height: 38px; }
-  .ctrl-btn.sp-btn { margin-left: auto; }
+  .ctrl-btn.sp-btn { }
   .ctrl-btn.sp-btn.active { color: var(--art-text, #fff); }
-  .ctrl-btn.sp-btn svg { width: 20px; height: 20px; }
+  .ctrl-btn.sp-btn svg { width: 24px; height: 24px; }
   .no-art .ctrl-btn { color: var(--primary-text-color); }
   .no-art .ctrl-btn:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
 
