@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// ASound Media Card — wraps the native media-control card and
-// adds speaker group management with per-speaker volume.
+// ASound Media Card — wraps the native media-control card,
+// adds artwork from a secondary entity, and replaces the
+// more-info dialog with one that includes per-speaker volume.
 //
 // Install:
 //   1. Copy to <ha-config>/www/asound-card.js
@@ -65,12 +66,9 @@ const STYLES = `
     text-overflow: ellipsis;
   }
 
-  .native-wrap {
-    /* Let the native card render without its own ha-card shell */
-  }
+  /* ── Native card wrapper ── */
   .native-wrap hui-media-control-card,
   .native-wrap .type-media-control {
-    /* Remove double card nesting */
     --ha-card-border-width: 0;
     --ha-card-box-shadow: none;
     --ha-card-border-radius: 0;
@@ -133,72 +131,146 @@ const STYLES = `
   .mini-play:hover { background: rgba(255,255,255,0.08); }
   .mini-play svg { width: 20px; height: 20px; fill: currentColor; }
 
-  /* ── Speakers Section ── */
-  .speakers-header {
+  /* ── Dialog overlay ── */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
     display: flex;
     align-items: center;
-    padding: 10px 16px;
-    cursor: pointer;
-    border-top: 1px solid var(--divider-color);
-    user-select: none;
-    gap: 8px;
+    justify-content: center;
+    padding: 16px;
+    animation: fadeIn 0.15s ease;
   }
-  .speakers-header:hover { background: rgba(255,255,255,0.03); }
-  .speakers-label {
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .dialog {
+    background: var(--card-background-color, #1c1c1e);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    padding: 16px 16px 8px;
+    gap: 12px;
+  }
+  .dialog-header-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .dialog-entity-name {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--primary-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .dialog-entity-state {
     font-size: 0.82em;
+    color: var(--secondary-text-color);
+    text-transform: capitalize;
+  }
+  .dialog-close {
+    background: none;
+    border: none;
+    color: var(--secondary-text-color);
+    font-size: 1.4em;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .dialog-close:hover { background: rgba(255,255,255,0.06); }
+
+  /* ── Dialog: now playing ── */
+  .dialog-nowplaying {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px 12px;
+  }
+  .dialog-art {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+  }
+  .dialog-art-placeholder {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--secondary-text-color);
+    font-size: 24px;
+  }
+  .dialog-track {
+    flex: 1;
+    min-width: 0;
+  }
+  .dialog-track-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--primary-text-color);
+  }
+  .dialog-track-artist {
+    font-size: 0.88em;
+    color: var(--secondary-text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ── Dialog: speakers ── */
+  .dialog-section-label {
+    font-size: 0.78em;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--secondary-text-color);
-    flex: 1;
-  }
-  .group-count {
-    font-size: 0.75em;
-    color: var(--secondary-text-color);
-    background: rgba(255,255,255,0.08);
-    padding: 2px 8px;
-    border-radius: 10px;
-  }
-  .chevron {
-    color: var(--secondary-text-color);
-    transition: transform 0.2s;
-    font-size: 0.8em;
-  }
-  .chevron.open { transform: rotate(180deg); }
-
-  .speakers-list {
-    padding: 0 0 8px;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
-  }
-  .speakers-list.collapsed {
-    max-height: 0 !important;
-    padding: 0;
+    padding: 12px 16px 6px;
+    border-top: 1px solid var(--divider-color);
   }
 
-  .sp-row {
+  .dialog-sp-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 7px 16px;
-    font-size: 0.88em;
-    transition: background 0.15s;
+    gap: 10px;
+    padding: 10px 16px;
   }
-  .sp-row:hover { background: rgba(255,255,255,0.02); }
+  .dialog-sp-row:last-child { padding-bottom: 16px; }
 
-  .sp-toggle {
+  .dialog-sp-toggle {
     position: relative;
     width: 36px;
     height: 20px;
     flex-shrink: 0;
   }
-  .sp-toggle input {
+  .dialog-sp-toggle input {
     opacity: 0;
     width: 0;
     height: 0;
     position: absolute;
   }
-  .sp-toggle .slider {
+  .dialog-sp-toggle .slider {
     position: absolute;
     inset: 0;
     background: rgba(255,255,255,0.12);
@@ -206,7 +278,7 @@ const STYLES = `
     cursor: pointer;
     transition: background 0.2s;
   }
-  .sp-toggle .slider::before {
+  .dialog-sp-toggle .slider::before {
     content: '';
     position: absolute;
     width: 16px; height: 16px;
@@ -215,55 +287,33 @@ const STYLES = `
     border-radius: 50%;
     transition: transform 0.2s;
   }
-  .sp-toggle input:checked + .slider {
+  .dialog-sp-toggle input:checked + .slider {
     background: var(--primary-color);
   }
-  .sp-toggle input:checked + .slider::before {
+  .dialog-sp-toggle input:checked + .slider::before {
     transform: translateX(16px);
     background: var(--text-primary-color, #fff);
   }
 
-  .sp-name {
+  .dialog-sp-info {
     flex: 1;
     min-width: 0;
+  }
+  .dialog-sp-name {
+    font-size: 0.9em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--primary-text-color);
   }
-  .sp-name.master { font-weight: 600; }
-  .sp-master-badge {
-    font-size: 0.72em;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: rgba(var(--rgb-primary-color, 255,152,0), 0.15);
-    color: var(--primary-color);
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
-  .sp-vol {
+  .dialog-sp-name.master { font-weight: 600; }
+  .dialog-sp-vol-row {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex: 0 0 110px;
+    margin-top: 3px;
   }
-  .sp-vol-val {
-    font-size: 0.72em;
-    color: var(--secondary-text-color);
-    width: 28px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-  }
-
-  .sp-unavailable {
-    font-size: 0.78em;
-    color: var(--disabled-text-color);
-    font-style: italic;
-  }
-
-  /* ── Range input (speaker volumes) ── */
-  .sp-vol input[type=range] {
+  .dialog-sp-vol-row input[type=range] {
     -webkit-appearance: none;
     appearance: none;
     flex: 1;
@@ -274,18 +324,40 @@ const STYLES = `
     cursor: pointer;
     min-width: 0;
   }
-  .sp-vol input[type=range]::-webkit-slider-thumb {
+  .dialog-sp-vol-row input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 14px; height: 14px;
     border-radius: 50%;
     background: var(--primary-color);
     border: none;
   }
-  .sp-vol input[type=range]::-moz-range-thumb {
+  .dialog-sp-vol-row input[type=range]::-moz-range-thumb {
     width: 14px; height: 14px;
     border-radius: 50%;
     background: var(--primary-color);
     border: none;
+  }
+  .dialog-sp-vol-val {
+    font-size: 0.72em;
+    color: var(--secondary-text-color);
+    width: 30px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .dialog-sp-badge {
+    font-size: 0.7em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(var(--rgb-primary-color, 255,152,0), 0.15);
+    color: var(--primary-color);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .dialog-sp-unavailable {
+    font-size: 0.8em;
+    color: var(--disabled-text-color);
+    font-style: italic;
   }
 
   .unavailable-msg {
@@ -311,12 +383,10 @@ class AsoundMediaCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
-    this._speakersExpanded = true;
     this._forceExpanded = false;
     this._nativeCard = null;
-    this._nativeReady = false;
+    this._dialogOpen = false;
     this._volTimers = {};
-    this._dragging = new Set();
   }
 
   static getConfigElement() {
@@ -330,8 +400,12 @@ class AsoundMediaCard extends HTMLElement {
 
   setConfig(config) {
     if (!config.entity) throw new Error('Please configure an entity');
-    this._config = { entity: config.entity, speakers: config.speakers || [], artwork_entity: config.artwork_entity || '', ...config };
-
+    this._config = {
+      entity: config.entity,
+      speakers: config.speakers || [],
+      artwork_entity: config.artwork_entity || '',
+      ...config,
+    };
     if (this._nativeCard) {
       this._nativeCard.setConfig({ type: 'media-control', entity: config.entity });
     }
@@ -342,6 +416,7 @@ class AsoundMediaCard extends HTMLElement {
     if (!this.shadowRoot.querySelector('ha-card')) this._buildDom();
     if (this._nativeCard) this._nativeCard.hass = hass;
     this._updateView();
+    if (this._dialogOpen) this._updateDialog();
   }
 
   getCardSize() {
@@ -358,14 +433,21 @@ class AsoundMediaCard extends HTMLElement {
         <div class="mini-bar" hidden></div>
         <div class="art-header" hidden></div>
         <div class="native-wrap" hidden></div>
-        <div class="speakers-section"></div>
       </ha-card>
     `;
 
     this._miniBar = this.shadowRoot.querySelector('.mini-bar');
     this._artHeader = this.shadowRoot.querySelector('.art-header');
     this._nativeWrap = this.shadowRoot.querySelector('.native-wrap');
-    this._speakersSection = this.shadowRoot.querySelector('.speakers-section');
+
+    // Intercept more-info events from the native card
+    this.shadowRoot.addEventListener('hass-more-info', (e) => {
+      if (this._config.speakers?.length > 0) {
+        e.stopPropagation();
+        this._openDialog();
+      }
+      // If no speakers configured, let the native more-info open normally
+    });
 
     try {
       const helpers = await window.loadCardHelpers();
@@ -375,14 +457,13 @@ class AsoundMediaCard extends HTMLElement {
       });
       if (this._hass) this._nativeCard.hass = this._hass;
       this._nativeWrap.appendChild(this._nativeCard);
-      this._nativeReady = true;
       this._updateView();
     } catch (e) {
       this._nativeWrap.innerHTML = `<div class="unavailable-msg">Could not load media-control card</div>`;
       this._nativeWrap.hidden = false;
     }
 
-    this._attachStaticEvents();
+    this._attachCardEvents();
   }
 
   _updateView() {
@@ -392,7 +473,7 @@ class AsoundMediaCard extends HTMLElement {
     if (!entity) {
       this._miniBar.hidden = true;
       this._nativeWrap.hidden = true;
-      this._speakersSection.innerHTML = `<div class="unavailable-msg">Entity ${esc(this._config.entity)} not found</div>`;
+      this._artHeader.hidden = true;
       return;
     }
 
@@ -405,20 +486,18 @@ class AsoundMediaCard extends HTMLElement {
 
     if (isActive) this._forceExpanded = false;
 
-    // Artwork from artwork_entity (e.g. Spotify)
+    // Artwork: prefer artwork_entity (e.g. Spotify), fall back to main entity
     const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
-    const artUrl = a.entity_picture || (artEnt && artEnt.attributes.entity_picture) || '';
-    const artTitle = a.media_title || (artEnt && artEnt.attributes.media_title) || '';
-    const artArtist = a.media_artist || (artEnt && artEnt.attributes.media_artist) || '';
+    const artEntPic = artEnt && artEnt.attributes.entity_picture;
+    const artUrl = artEntPic || a.entity_picture || '';
+    const artTitle = (artEntPic ? artEnt.attributes.media_title : a.media_title) || '';
+    const artArtist = (artEntPic ? artEnt.attributes.media_artist : a.media_artist) || '';
 
-    // Toggle between minimized and full
     if (showFull) {
       this._miniBar.hidden = true;
       this._nativeWrap.hidden = false;
 
-      // Show artwork header if we have artwork from the artwork_entity
-      // (skip if the main entity already has artwork — the native card shows it)
-      if (artUrl && !a.entity_picture && artEnt) {
+      if (artUrl && artEntPic) {
         this._artHeader.hidden = false;
         this._artHeader.innerHTML = `
           <div class="art-bg" style="background-image:url('${esc(artUrl)}')"></div>
@@ -446,110 +525,157 @@ class AsoundMediaCard extends HTMLElement {
         <button class="mini-play">${SVG_PLAY}</button>
       `;
     }
-
-    // Speakers section
-    this._renderSpeakers(entity);
   }
 
-  _renderSpeakers(entity) {
-    const speakers = this._config.speakers || [];
-    if (speakers.length === 0) {
-      this._speakersSection.innerHTML = '';
-      return;
-    }
-
-    const a = entity.attributes;
-    const groupMembers = a.group_members || [];
-    const groupSet = new Set(groupMembers);
-    const master = groupMembers[0] || this._config.entity;
-    const groupCount = groupMembers.length > 1 ? groupMembers.length : 0;
-
-    let html = '';
-
-    html += `<div class="speakers-header" data-action="toggle-speakers">`;
-    html += `<span class="speakers-label">Speakers</span>`;
-    if (groupCount > 0) html += `<span class="group-count">${groupCount} grouped</span>`;
-    html += `<span class="chevron ${this._speakersExpanded ? 'open' : ''}">▾</span>`;
-    html += `</div>`;
-
-    html += `<div class="speakers-list ${this._speakersExpanded ? '' : 'collapsed'}" style="max-height:${this._speakersExpanded ? speakers.length * 42 + 16 : 0}px">`;
-
-    for (const spId of speakers) {
-      const sp = this._hass.states[spId];
-      if (!sp) {
-        html += `<div class="sp-row"><span class="sp-name">${esc(spId)}</span><span class="sp-unavailable">unavailable</span></div>`;
-        continue;
-      }
-      const spName = sp.attributes.friendly_name || spId;
-      const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
-      const inGroup = groupSet.has(spId);
-      const isMaster = spId === master && groupCount > 0;
-      const isMainEntity = spId === this._config.entity;
-
-      html += `<div class="sp-row">`;
-      if (!isMainEntity) {
-        html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} data-group-toggle="${spId}"><span class="slider"></span></label>`;
-      } else {
-        html += `<label class="sp-toggle"><input type="checkbox" checked disabled><span class="slider"></span></label>`;
-      }
-      html += `<span class="sp-name ${isMaster ? 'master' : ''}">${esc(spName)}</span>`;
-      if (isMaster) html += `<span class="sp-master-badge">master</span>`;
-      html += `<div class="sp-vol">`;
-      html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
-      html += `<span class="sp-vol-val">${spVol}%</span>`;
-      html += `</div>`;
-      html += `</div>`;
-    }
-
-    html += `</div>`;
-
-    this._speakersSection.innerHTML = html;
-  }
-
-  _attachStaticEvents() {
+  _attachCardEvents() {
     const card = this.shadowRoot.querySelector('ha-card');
 
     card.addEventListener('click', (e) => {
-      // Mini bar expand
       if (e.target.closest('.mini-bar') && !e.target.closest('.mini-play')) {
         this._forceExpanded = true;
         this._updateView();
         return;
       }
-      // Mini play button
       if (e.target.closest('.mini-play')) {
         this._svc('media_player', 'media_play', this._config.entity);
         return;
       }
-      // Speakers header toggle
-      if (e.target.closest('[data-action="toggle-speakers"]')) {
-        this._speakersExpanded = !this._speakersExpanded;
-        const list = card.querySelector('.speakers-list');
-        const chev = card.querySelector('.chevron');
-        if (list) {
-          list.classList.toggle('collapsed', !this._speakersExpanded);
-          list.style.maxHeight = this._speakersExpanded ? (this._config.speakers.length * 42 + 16) + 'px' : '0';
+    });
+  }
+
+  // ── Custom Dialog ──
+
+  _openDialog() {
+    if (this._dialogOpen) return;
+    this._dialogOpen = true;
+
+    this._dialogEl = document.createElement('div');
+    this._dialogEl.className = 'dialog-overlay';
+    this._dialogEl.addEventListener('click', (e) => {
+      if (e.target === this._dialogEl) this._closeDialog();
+    });
+
+    this.shadowRoot.appendChild(this._dialogEl);
+    this._updateDialog();
+    this._attachDialogEvents();
+  }
+
+  _closeDialog() {
+    this._dialogOpen = false;
+    if (this._dialogEl) {
+      this._dialogEl.remove();
+      this._dialogEl = null;
+    }
+  }
+
+  _updateDialog() {
+    if (!this._dialogEl || !this._hass) return;
+
+    const entity = this._hass.states[this._config.entity];
+    if (!entity) { this._closeDialog(); return; }
+
+    const a = entity.attributes;
+    const name = a.friendly_name || this._config.entity;
+    const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
+    const artEntPic = artEnt && artEnt.attributes.entity_picture;
+    const artUrl = artEntPic || a.entity_picture || '';
+    const title = (artEntPic ? artEnt.attributes.media_title : a.media_title) || '';
+    const artist = (artEntPic ? artEnt.attributes.media_artist : a.media_artist) || '';
+
+    const groupMembers = a.group_members || [];
+    const groupSet = new Set(groupMembers);
+    const master = groupMembers[0] || this._config.entity;
+    const speakers = this._config.speakers || [];
+
+    let html = '<div class="dialog">';
+
+    // Header
+    html += `<div class="dialog-header">`;
+    html += `<div class="dialog-header-info">`;
+    html += `<div class="dialog-entity-name">${esc(name)}</div>`;
+    html += `<div class="dialog-entity-state">${esc(entity.state)}</div>`;
+    html += `</div>`;
+    html += `<button class="dialog-close" data-action="close">✕</button>`;
+    html += `</div>`;
+
+    // Now playing
+    if (title || artUrl) {
+      html += `<div class="dialog-nowplaying">`;
+      if (artUrl) {
+        html += `<img class="dialog-art" src="${esc(artUrl)}" alt="">`;
+      } else {
+        html += `<div class="dialog-art-placeholder">♪</div>`;
+      }
+      html += `<div class="dialog-track">`;
+      html += `<div class="dialog-track-title">${title ? esc(title) : 'Unknown'}</div>`;
+      if (artist) html += `<div class="dialog-track-artist">${esc(artist)}</div>`;
+      html += `</div></div>`;
+    }
+
+    // Speakers
+    if (speakers.length > 0) {
+      html += `<div class="dialog-section-label">Speakers</div>`;
+
+      for (const spId of speakers) {
+        const sp = this._hass.states[spId];
+        if (!sp) {
+          html += `<div class="dialog-sp-row"><span class="dialog-sp-name">${esc(spId)}</span><span class="dialog-sp-unavailable">unavailable</span></div>`;
+          continue;
         }
-        if (chev) chev.classList.toggle('open', this._speakersExpanded);
+        const spName = sp.attributes.friendly_name || spId;
+        const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const inGroup = groupSet.has(spId);
+        const isMaster = spId === master && groupMembers.length > 1;
+        const isMainEntity = spId === this._config.entity;
+
+        html += `<div class="dialog-sp-row">`;
+
+        if (!isMainEntity) {
+          html += `<label class="dialog-sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} data-group-toggle="${spId}"><span class="slider"></span></label>`;
+        } else {
+          html += `<label class="dialog-sp-toggle"><input type="checkbox" checked disabled><span class="slider"></span></label>`;
+        }
+
+        html += `<div class="dialog-sp-info">`;
+        html += `<div class="dialog-sp-name ${isMaster ? 'master' : ''}">${esc(spName)}</div>`;
+        html += `<div class="dialog-sp-vol-row">`;
+        html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
+        html += `<span class="dialog-sp-vol-val">${spVol}%</span>`;
+        html += `</div>`;
+        html += `</div>`;
+
+        if (isMaster) html += `<span class="dialog-sp-badge">master</span>`;
+        html += `</div>`;
+      }
+    }
+
+    html += '</div>';
+    this._dialogEl.innerHTML = html;
+  }
+
+  _attachDialogEvents() {
+    if (!this._dialogEl) return;
+
+    this._dialogEl.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="close"]')) {
+        this._closeDialog();
       }
     });
 
-    card.addEventListener('input', (e) => {
+    this._dialogEl.addEventListener('input', (e) => {
       const slider = e.target.closest('input[data-vol]');
       if (!slider) return;
       const eid = slider.dataset.vol;
       const val = parseInt(slider.value);
       const label = slider.nextElementSibling;
       if (label) label.textContent = val + '%';
-      this._dragging.add(eid);
       clearTimeout(this._volTimers[eid]);
       this._volTimers[eid] = setTimeout(() => {
         this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
-        setTimeout(() => this._dragging.delete(eid), 500);
       }, 150);
     });
 
-    card.addEventListener('change', (e) => {
+    this._dialogEl.addEventListener('change', (e) => {
       const toggle = e.target.closest('input[data-group-toggle]');
       if (!toggle) return;
       const spId = toggle.dataset.groupToggle;
@@ -600,8 +726,6 @@ const EDITOR_STYLES = `
     color: var(--secondary-text-color); font-size: 1.1em; padding: 0 4px;
   }
   .sp-remove:hover { color: var(--error-color); }
-  .add-row { display: flex; gap: 8px; align-items: flex-end; }
-  .add-row ha-entity-picker { flex: 1; }
 `;
 
 class AsoundMediaCardEditor extends HTMLElement {
@@ -646,7 +770,7 @@ class AsoundMediaCardEditor extends HTMLElement {
       </div>
 
       <div class="row">
-        <label>Speakers (toggleable in group)</label>
+        <label>Speakers (group toggles + volume in detail view)</label>
         <div class="sp-list" id="sp-list">
           ${speakers.map((s, i) => `
             <div class="sp-item">
@@ -655,7 +779,7 @@ class AsoundMediaCardEditor extends HTMLElement {
             </div>
           `).join('')}
         </div>
-        <div class="add-row" style="margin-top:8px">
+        <div style="margin-top:8px">
           <ha-entity-picker
             id="add-picker"
             allow-custom-entity
@@ -721,6 +845,6 @@ window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'asound-media-card',
   name: 'ASound Media',
-  description: 'Native media-control card with speaker group management and per-speaker volume',
+  description: 'Media player with artwork fallback and speaker group volume controls',
   preview: true,
 });
