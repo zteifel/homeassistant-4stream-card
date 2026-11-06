@@ -421,13 +421,6 @@ class AsoundMediaCard extends HTMLElement {
     return ((active && !isFollower) || this._forceExpanded) ? 3 : 1;
   }
 
-  _matchesSource(speakerName, sourceName) {
-    if (!speakerName || !sourceName) return false;
-    const a = speakerName.toLowerCase();
-    const b = sourceName.toLowerCase();
-    return a === b || a.includes(b) || b.includes(a);
-  }
-
   _getState() {
     const entity = this._hass.states[this._config.entity];
     if (!entity) return null;
@@ -436,33 +429,14 @@ class AsoundMediaCard extends HTMLElement {
     const artEntPic = artEnt?.attributes?.entity_picture;
     const mainId = this._config.entity;
     const speakers = this._config.speakers || [];
-    const speakerName = a.friendly_name || mainId;
 
     const mainGm = a.group_members || [];
     const groupSet = new Set(mainGm);
-    for (const spId of speakers) {
-      const sp = this._hass.states[spId];
-      const spGm = sp?.attributes?.group_members || [];
-      if (spGm.includes(mainId)) {
-        for (const id of spGm) groupSet.add(id);
-      }
-    }
+    const isFollower = mainGm.length > 1 && mainGm[0] !== mainId;
 
-    // Use source entity to supplement HA's broken LinkPlay state
-    const srcPlaying = artEnt?.state === 'playing' || artEnt?.state === 'paused';
-    const srcSource = artEnt?.attributes?.source || '';
-    const isSrcTarget = srcPlaying && this._matchesSource(speakerName, srcSource);
-
-    let isPlaying = entity.state === 'playing' || (isSrcTarget && artEnt?.state === 'playing');
-    let isPaused = entity.state === 'paused' || (isSrcTarget && artEnt?.state === 'paused');
+    let isPlaying = entity.state === 'playing';
+    let isPaused = entity.state === 'paused';
     let isActive = isPlaying || isPaused;
-
-    // Follower: HA says playing, but source entity targets a different speaker
-    const isFollower = entity.state === 'playing' && srcPlaying && !isSrcTarget
-      && speakers.some(spId => {
-        const sp = this._hass.states[spId];
-        return this._matchesSource(sp?.attributes?.friendly_name, srcSource);
-      });
 
     const pp = this._pendingPlay;
     if (pp && Date.now() - pp.time < 5000) {
@@ -740,21 +714,11 @@ class AsoundMediaCard extends HTMLElement {
     const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
-    const realState = mainState?.state;
-    const speakerActive = realState === 'playing' || realState === 'paused';
-
-    // Also check if source entity is actively playing on this speaker
-    const artEnt = artEntId && this._hass.states[artEntId];
-    const srcActive = artEnt && (artEnt.state === 'playing' || artEnt.state === 'paused')
-      && this._matchesSource(mainState?.attributes?.friendly_name, artEnt.attributes?.source);
-    const isActive = speakerActive || srcActive;
-
-    // Use source entity for play/pause when speaker entity doesn't reflect state
-    const ppTarget = (srcActive && !speakerActive) ? artEntId : mainEnt;
+    const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
 
     if (!fromMini) {
       if (isActive) {
-        this._svc('media_player', 'media_play_pause', ppTarget);
+        this._svc('media_player', 'media_play_pause', mainEnt);
       } else if (this._pendingPlay) {
         this._pendingPlay = null;
         this._render();
