@@ -742,8 +742,10 @@ class AsoundMediaCard extends HTMLElement {
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, 8, 8);
       let r, g, b;
+      let pixels = null;
       try {
         const data = ctx.getImageData(0, 0, 8, 8).data;
+        pixels = data;
         let tr = 0, tg = 0, tb = 0, count = 0;
         for (let i = 0; i < data.length; i += 4) {
           tr += data[i]; tg += data[i+1]; tb += data[i+2]; count++;
@@ -754,27 +756,66 @@ class AsoundMediaCard extends HTMLElement {
       } catch(e) {
         r = 80; g = 80; b = 80;
       }
-      this._applyColor(r, g, b);
+      this._applyColor(r, g, b, pixels);
     };
     img.onerror = () => this._applyColor(80, 80, 80);
     img.src = url;
   }
 
-  _applyColor(r, g, b) {
+  _applyColor(r, g, b, pixels) {
     const boost = 1.15;
     r = Math.min(255, Math.round(r * boost));
     g = Math.min(255, Math.round(g * boost));
     b = Math.min(255, Math.round(b * boost));
-    const color = `rgb(${r},${g},${b})`;
-    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    const textColor = lum > 0.45 ? '#000' : '#fff';
-    const textMuted = lum > 0.45 ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.7)';
+    const bgColor = `rgb(${r},${g},${b})`;
+    const bgLum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+    let textColor;
+    if (pixels) {
+      textColor = this._pickTextColor(pixels, r, g, b, bgLum);
+    }
+    if (!textColor) {
+      textColor = bgLum > 0.45 ? '#000' : '#fff';
+    }
+
     const player = this._card?.querySelector('.player');
     if (player) {
-      player.style.setProperty('--art-bg', color);
+      player.style.setProperty('--art-bg', bgColor);
       player.style.setProperty('--art-text', textColor);
-      player.style.setProperty('--art-text-muted', textMuted);
+      player.style.setProperty('--art-text-muted', textColor);
     }
+  }
+
+  _pickTextColor(data, bgR, bgG, bgB, bgLum) {
+    const candidates = [];
+    for (let i = 0; i < data.length; i += 4) {
+      const pr = data[i], pg = data[i+1], pb = data[i+2];
+      const max = Math.max(pr, pg, pb), min = Math.min(pr, pg, pb);
+      const delta = max - min;
+      const sat = max === 0 ? 0 : delta / max;
+      const pLum = (0.299 * pr + 0.587 * pg + 0.114 * pb) / 255;
+      const contrast = Math.abs(pLum - bgLum);
+      if (sat > 0.2 && contrast > 0.3) {
+        candidates.push({ r: pr, g: pg, b: pb, sat, contrast, score: sat * 0.6 + contrast * 0.4 });
+      }
+    }
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => b.score - a.score);
+    const best = candidates[0];
+    let tr = best.r, tg = best.g, tb = best.b;
+    const tLum = (0.299 * tr + 0.587 * tg + 0.114 * tb) / 255;
+    if (bgLum < 0.5 && tLum < 0.5) {
+      const f = 1.6;
+      tr = Math.min(255, Math.round(tr * f));
+      tg = Math.min(255, Math.round(tg * f));
+      tb = Math.min(255, Math.round(tb * f));
+    } else if (bgLum >= 0.5 && tLum > 0.5) {
+      const f = 0.5;
+      tr = Math.round(tr * f);
+      tg = Math.round(tg * f);
+      tb = Math.round(tb * f);
+    }
+    return `rgb(${tr},${tg},${tb})`;
   }
 
   _resolveVol(entityId, hassVol) {
