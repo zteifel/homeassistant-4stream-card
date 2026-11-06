@@ -34,7 +34,7 @@ const STYLES = `
     top: 0; right: 0; bottom: 0;
     width: 55%;
     object-fit: contain;
-    object-position: right top;
+    object-position: right center;
     z-index: 0;
   }
   .art-bg-fade {
@@ -55,7 +55,7 @@ const STYLES = `
     min-width: 0;
   }
   .track-title {
-    font-size: 1.05em;
+    font-size: 1.25em;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -63,7 +63,7 @@ const STYLES = `
     color: var(--art-text, #fff);
   }
   .track-artist {
-    font-size: 0.85em;
+    font-size: 1em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -92,8 +92,8 @@ const STYLES = `
     background: none;
     border: none;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -103,9 +103,9 @@ const STYLES = `
     transition: background 0.15s;
   }
   .ctrl-btn:hover { background: rgba(128,128,128,0.2); }
-  .ctrl-btn svg { width: 24px; height: 24px; fill: currentColor; pointer-events: none; }
-  .ctrl-btn.play-btn { width: 48px; height: 48px; }
-  .ctrl-btn.play-btn svg { width: 32px; height: 32px; }
+  .ctrl-btn svg { width: 28px; height: 28px; fill: currentColor; pointer-events: none; }
+  .ctrl-btn.play-btn { width: 56px; height: 56px; }
+  .ctrl-btn.play-btn svg { width: 38px; height: 38px; }
   .ctrl-btn.sp-btn { margin-left: auto; }
   .ctrl-btn.sp-btn.active { color: var(--primary-color); }
   .ctrl-btn.sp-btn svg { width: 20px; height: 20px; }
