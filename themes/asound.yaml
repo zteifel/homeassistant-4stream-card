@@ -1,0 +1,380 @@
+# ══════════════════════════════════════════════════════════════════
+# ASound Theme — warm amber audio-console aesthetic
+# ══════════════════════════════════════════════════════════════════
+#
+# INSTALLATION
+# 1. Copy this file to <ha-config>/themes/asound.yaml
+#
+# 2. Add to configuration.yaml (if not already present):
+#      frontend:
+#        themes: !include_dir_merge_named themes
+#
+# 3. Restart Home Assistant (or call frontend.reload_themes)
+#
+# 4. Select the theme:
+#    - Per user: Profile → Theme → "ASound"
+#    - System-wide: Developer Tools → Actions → frontend.set_theme
+# ══════════════════════════════════════════════════════════════════
+
+ASound:
+  # ─── Shared (mode-independent) ───
+  ha-card-border-radius: "10px"
+  ha-card-border-width: "1px"
+
+  modes:
+    # ════════════════════════════════════════
+    #  DARK MODE — the primary look
+    # ════════════════════════════════════════
+    dark:
+      # ── Backgrounds ──
+      primary-background-color: "#0c0c10"
+      secondary-background-color: "#1c1c26"
+      card-background-color: "#15151d"
+      clear-background-color: "#0c0c10"
+      lovelace-background: "#0c0c10"
+      ha-card-background: "#15151d"
+      ha-panel-background: "#0c0c10"
+      data-table-background-color: "#15151d"
+      table-header-background-color: "#1c1c26"
+      table-row-background-color: "#15151d"
+      table-row-alternative-background-color: "#111118"
+      markdown-code-background-color: "#111118"
+
+      # ── Primary & Accent ──
+      primary-color: "#d4a574"
+      accent-color: "#d4a574"
+      dark-primary-color: "#b07840"
+      darker-primary-color: "#8a5c2e"
+      light-primary-color: "#e0b88a"
+
+      # ── Text ──
+      primary-text-color: "#e4e2de"
+      secondary-text-color: "#85818c"
+      disabled-text-color: "#56525e"
+      text-primary-color: "#0c0c10"
+      text-light-primary-color: "#e4e2de"
+
+      # ── Dividers & Borders ──
+      divider-color: "rgba(255, 255, 255, 0.07)"
+      outline-color: "rgba(255, 255, 255, 0.07)"
+      outline-hover-color: "rgba(255, 255, 255, 0.14)"
+      ha-card-border-color: "#28283a"
+      ha-card-box-shadow: "0 2px 8px rgba(0, 0, 0, 0.4)"
+
+      # ── Sidebar ──
+      sidebar-background-color: "#0c0c10"
+      sidebar-text-color: "#e4e2de"
+      sidebar-selected-text-color: "#d4a574"
+      sidebar-selected-icon-color: "#d4a574"
+      sidebar-icon-color: "rgba(228, 226, 222, 0.45)"
+
+      # ── App Header / Toolbar ──
+      app-header-background-color: "#15151d"
+      app-header-text-color: "#e4e2de"
+      app-header-border-bottom: "1px solid #28283a"
+      ha-panel-toolbar-background: "#15151d"
+
+      # ── Sliders ──
+      slider-color: "#d4a574"
+      slider-secondary-color: "#28283a"
+      slider-track-color: "#28283a"
+
+      # ── Status Colors ──
+      error-color: "#e87070"
+      warning-color: "#e8c468"
+      success-color: "#6ecf8e"
+      info-color: "#7ab8da"
+
+      # ── Entity State ──
+      state-icon-color: "#85818c"
+      state-active-color: "#d4a574"
+      state-inactive-color: "#56525e"
+      state-unavailable-color: "#56525e"
+
+      # ── Media Player States ──
+      state-media_player-playing-color: "#6ecf8e"
+      state-media_player-paused-color: "#d4a574"
+      state-media_player-idle-color: "#56525e"
+      state-media_player-off-color: "#56525e"
+      state-media_player-active-color: "#6ecf8e"
+
+      # ── Other Domain States ──
+      state-light-active-color: "#d4a574"
+      state-switch-active-color: "#d4a574"
+      state-binary_sensor-active-color: "#d4a574"
+
+      # ── Form Inputs ──
+      input-fill-color: "rgba(255, 255, 255, 0.04)"
+      input-disabled-fill-color: "rgba(255, 255, 255, 0.02)"
+      input-ink-color: "rgba(255, 255, 255, 0.87)"
+      input-label-ink-color: "rgba(255, 255, 255, 0.5)"
+      input-disabled-ink-color: "rgba(255, 255, 255, 0.3)"
+      input-idle-line-color: "rgba(255, 255, 255, 0.18)"
+      input-hover-line-color: "rgba(255, 255, 255, 0.5)"
+      input-disabled-line-color: "rgba(255, 255, 255, 0.05)"
+      input-outlined-idle-border-color: "#28283a"
+      input-outlined-hover-border-color: "#d4a574"
+      input-outlined-disabled-border-color: "rgba(255, 255, 255, 0.05)"
+      input-dropdown-icon-color: "#85818c"
+
+      # ── Scrollbar ──
+      scrollbar-thumb-color: "#28283a"
+
+      # ── Shadows ──
+      shadow-color: "rgba(0, 0, 0, 0.5)"
+      bar-box-shadow: "0 2px 12px rgba(0, 0, 0, 0.5)"
+
+      # ── Checkboxes & Radios ──
+      mdc-checkbox-unchecked-color: "rgba(228, 226, 222, 0.4)"
+      mdc-checkbox-disabled-color: "#56525e"
+      mdc-radio-unchecked-color: "rgba(228, 226, 222, 0.4)"
+      mdc-radio-disabled-color: "#56525e"
+
+      # ── Buttons & Chips ──
+      mdc-button-outline-color: "#28283a"
+      mdc-button-disabled-ink-color: "#56525e"
+      ha-assist-chip-filled-container-color: "rgba(212, 165, 116, 0.12)"
+      ha-assist-chip-active-container-color: "rgba(212, 165, 116, 0.2)"
+      chip-background-color: "rgba(228, 226, 222, 0.08)"
+      ha-button-primary-light-color: "rgba(212, 165, 116, 0.25)"
+      ha-button-warning-light-color: "rgba(232, 196, 104, 0.25)"
+      ha-button-neutral-color: "#85818c"
+      ha-button-neutral-light-color: "#56525e"
+
+      # ── Material Design ──
+      mdc-theme-primary: "#d4a574"
+      mdc-theme-secondary: "#d4a574"
+      mdc-theme-background: "#0c0c10"
+      mdc-theme-surface: "#15151d"
+      mdc-theme-on-surface: "#e4e2de"
+      mdc-theme-error: "#e87070"
+      mdc-ripple-color: "#d4a574"
+      mdc-linear-progress-buffer-color: "rgba(255, 255, 255, 0.08)"
+
+      # ── Label Badges ──
+      label-badge-background-color: "#15151d"
+      label-badge-text-color: "rgba(228, 226, 222, 0.8)"
+      label-badge-red: "#e87070"
+      label-badge-blue: "#7ab8da"
+      label-badge-green: "#6ecf8e"
+      label-badge-yellow: "#e8c468"
+      label-badge-grey: "#56525e"
+
+      # ── RGB Components ──
+      rgb-primary-color: "212, 165, 116"
+      rgb-accent-color: "212, 165, 116"
+      rgb-primary-text-color: "228, 226, 222"
+      rgb-secondary-text-color: "133, 129, 140"
+      rgb-text-primary-color: "12, 12, 16"
+      rgb-card-background-color: "21, 21, 29"
+      rgb-error-color: "232, 112, 112"
+      rgb-warning-color: "232, 196, 104"
+      rgb-success-color: "110, 207, 142"
+      rgb-info-color: "122, 184, 218"
+
+      # ── Named Palette (adjusted for dark) ──
+      disabled-color: "#3a3a46"
+      red-color: "#e87070"
+      green-color: "#6ecf8e"
+      blue-color: "#7ab8da"
+      orange-color: "#d4a574"
+      amber-color: "#e8c468"
+      teal-color: "#7edab8"
+      purple-color: "#b87eda"
+      pink-color: "#da7eb8"
+      grey-color: "#85818c"
+      dark-grey-color: "#56525e"
+
+      # ── Code Editor ──
+      codemirror-keyword: "#d4a574"
+      codemirror-string: "#6ecf8e"
+      codemirror-number: "#7ab8da"
+      codemirror-comment: "#56525e"
+      codemirror-atom: "#b87eda"
+      codemirror-tag: "#da7eb8"
+      codemirror-attribute: "#e8c468"
+      codemirror-builtin: "#7edab8"
+      codemirror-qualifier: "#8ed47e"
+      codemirror-property: "#e4e2de"
+      codemirror-type: "#7ab8da"
+      codemirror-def: "#d4a574"
+      codemirror-variable: "#e4e2de"
+      codemirror-meta: "#85818c"
+
+      # ── Energy ──
+      energy-grid-consumption-color: "#7ab8da"
+      energy-grid-return-color: "#b87eda"
+      energy-solar-color: "#d4a574"
+      energy-non-fossil-color: "#6ecf8e"
+      energy-battery-out-color: "#7edab8"
+      energy-battery-in-color: "#da7eb8"
+      energy-gas-color: "#e87070"
+      energy-water-color: "#7ab8da"
+
+
+    # ════════════════════════════════════════
+    #  LIGHT MODE — warm parchment variant
+    # ════════════════════════════════════════
+    light:
+      # ── Backgrounds ──
+      primary-background-color: "#f2f0ec"
+      secondary-background-color: "#e8e5e0"
+      card-background-color: "#ffffff"
+      clear-background-color: "#f2f0ec"
+      lovelace-background: "#f2f0ec"
+      ha-card-background: "#ffffff"
+      ha-panel-background: "#f2f0ec"
+      data-table-background-color: "#ffffff"
+      table-header-background-color: "#e8e5e0"
+      table-row-background-color: "#ffffff"
+      table-row-alternative-background-color: "#f8f6f2"
+      markdown-code-background-color: "#f2f0ec"
+
+      # ── Primary & Accent ──
+      primary-color: "#b07840"
+      accent-color: "#b07840"
+      dark-primary-color: "#8a5c2e"
+      darker-primary-color: "#6e4820"
+      light-primary-color: "#d4a574"
+
+      # ── Text ──
+      primary-text-color: "#1a1816"
+      secondary-text-color: "#6e6864"
+      disabled-text-color: "#a09a94"
+      text-primary-color: "#ffffff"
+      text-light-primary-color: "#1a1816"
+
+      # ── Dividers & Borders ──
+      divider-color: "rgba(0, 0, 0, 0.07)"
+      outline-color: "rgba(0, 0, 0, 0.07)"
+      outline-hover-color: "rgba(0, 0, 0, 0.14)"
+      ha-card-border-color: "#d4d0ca"
+      ha-card-box-shadow: "0 1px 4px rgba(0, 0, 0, 0.06)"
+
+      # ── Sidebar ──
+      sidebar-background-color: "#f2f0ec"
+      sidebar-text-color: "#1a1816"
+      sidebar-selected-text-color: "#b07840"
+      sidebar-selected-icon-color: "#b07840"
+      sidebar-icon-color: "rgba(26, 24, 22, 0.45)"
+
+      # ── App Header / Toolbar ──
+      app-header-background-color: "#ffffff"
+      app-header-text-color: "#1a1816"
+      app-header-border-bottom: "1px solid #d4d0ca"
+      ha-panel-toolbar-background: "#ffffff"
+
+      # ── Sliders ──
+      slider-color: "#b07840"
+      slider-secondary-color: "#e8e5e0"
+      slider-track-color: "#d4d0ca"
+
+      # ── Status Colors ──
+      error-color: "#c44040"
+      warning-color: "#c0940e"
+      success-color: "#2e9e54"
+      info-color: "#4888a8"
+
+      # ── Entity State ──
+      state-icon-color: "#6e6864"
+      state-active-color: "#b07840"
+      state-inactive-color: "#a09a94"
+      state-unavailable-color: "#a09a94"
+
+      # ── Media Player States ──
+      state-media_player-playing-color: "#2e9e54"
+      state-media_player-paused-color: "#b07840"
+      state-media_player-idle-color: "#a09a94"
+      state-media_player-off-color: "#a09a94"
+      state-media_player-active-color: "#2e9e54"
+
+      # ── Other Domain States ──
+      state-light-active-color: "#b07840"
+      state-switch-active-color: "#b07840"
+      state-binary_sensor-active-color: "#b07840"
+
+      # ── Form Inputs ──
+      input-fill-color: "#edeae6"
+      input-disabled-fill-color: "#f2f0ec"
+      input-ink-color: "rgba(0, 0, 0, 0.87)"
+      input-label-ink-color: "rgba(0, 0, 0, 0.5)"
+      input-disabled-ink-color: "rgba(0, 0, 0, 0.3)"
+      input-idle-line-color: "rgba(0, 0, 0, 0.18)"
+      input-hover-line-color: "rgba(0, 0, 0, 0.5)"
+      input-disabled-line-color: "rgba(0, 0, 0, 0.05)"
+      input-outlined-idle-border-color: "#d4d0ca"
+      input-outlined-hover-border-color: "#b07840"
+      input-outlined-disabled-border-color: "rgba(0, 0, 0, 0.05)"
+      input-dropdown-icon-color: "#6e6864"
+
+      # ── Scrollbar ──
+      scrollbar-thumb-color: "#d4d0ca"
+
+      # ── Shadows ──
+      shadow-color: "rgba(0, 0, 0, 0.08)"
+      bar-box-shadow: "0 2px 12px rgba(0, 0, 0, 0.06)"
+
+      # ── Checkboxes & Radios ──
+      mdc-checkbox-unchecked-color: "rgba(26, 24, 22, 0.4)"
+      mdc-checkbox-disabled-color: "#a09a94"
+      mdc-radio-unchecked-color: "rgba(26, 24, 22, 0.4)"
+      mdc-radio-disabled-color: "#a09a94"
+
+      # ── Buttons & Chips ──
+      mdc-button-outline-color: "#d4d0ca"
+      mdc-button-disabled-ink-color: "#a09a94"
+      ha-assist-chip-filled-container-color: "rgba(176, 120, 64, 0.08)"
+      ha-assist-chip-active-container-color: "rgba(176, 120, 64, 0.14)"
+      chip-background-color: "rgba(26, 24, 22, 0.06)"
+
+      # ── Material Design ──
+      mdc-theme-primary: "#b07840"
+      mdc-theme-secondary: "#b07840"
+      mdc-theme-background: "#f2f0ec"
+      mdc-theme-surface: "#ffffff"
+      mdc-theme-on-surface: "#1a1816"
+      mdc-theme-error: "#c44040"
+      mdc-ripple-color: "#b07840"
+
+      # ── Label Badges ──
+      label-badge-background-color: "#ffffff"
+      label-badge-text-color: "rgba(26, 24, 22, 0.8)"
+      label-badge-red: "#c44040"
+      label-badge-blue: "#4888a8"
+      label-badge-green: "#2e9e54"
+      label-badge-yellow: "#c0940e"
+      label-badge-grey: "#a09a94"
+
+      # ── RGB Components ──
+      rgb-primary-color: "176, 120, 64"
+      rgb-accent-color: "176, 120, 64"
+      rgb-primary-text-color: "26, 24, 22"
+      rgb-secondary-text-color: "110, 104, 100"
+      rgb-text-primary-color: "255, 255, 255"
+      rgb-card-background-color: "255, 255, 255"
+      rgb-error-color: "196, 64, 64"
+      rgb-warning-color: "192, 148, 14"
+      rgb-success-color: "46, 158, 84"
+      rgb-info-color: "72, 136, 168"
+
+      # ── Named Palette ──
+      red-color: "#c44040"
+      green-color: "#2e9e54"
+      blue-color: "#4888a8"
+      orange-color: "#b07840"
+      amber-color: "#c0940e"
+      teal-color: "#48a888"
+      purple-color: "#8848a8"
+      pink-color: "#a84888"
+      grey-color: "#6e6864"
+      dark-grey-color: "#4a4642"
+
+      # ── Energy ──
+      energy-grid-consumption-color: "#4888a8"
+      energy-grid-return-color: "#8848a8"
+      energy-solar-color: "#b07840"
+      energy-non-fossil-color: "#2e9e54"
+      energy-battery-out-color: "#48a888"
+      energy-battery-in-color: "#a84888"
+      energy-gas-color: "#c44040"
+      energy-water-color: "#4888a8"
