@@ -1,0 +1,503 @@
+<title>ASound</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Outfit:wght@300;400;500;600&display=swap">
+
+<style>
+/* ─── Dark-first audio control surface ─── */
+:root {
+  --bg: #0c0c10; --bg-s: #15151d; --bg-el: #1c1c26; --bg-in: #111118;
+  --bdr: #28283a; --bdr-s: #1e1e2c;
+  --tx: #e4e2de; --tx2: #85818c; --tx3: #56525e;
+  --ac: #d4a574; --ac-dim: rgba(212,165,116,0.12); --ac-tx: #0c0c10;
+  --ok: #6ecf8e; --ok-dim: rgba(110,207,142,0.12);
+  --err: #e87070; --err-dim: rgba(232,112,112,0.12);
+  --sh: 0 2px 8px rgba(0,0,0,0.4); --sh-lg: 0 8px 24px rgba(0,0,0,0.5);
+  --r: 10px; --r-s: 6px; --r-l: 14px;
+  --f-d: 'Syne', system-ui, sans-serif;
+  --f-b: 'Outfit', system-ui, sans-serif;
+  --g1:#d4a574; --g2:#7ab8da; --g3:#8ed47e; --g4:#da7eb8; --g5:#7edab8; --g6:#b87eda;
+  color-scheme: dark;
+}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#f2f0ec; --bg-s:#fff; --bg-el:#fff; --bg-in:#e8e5e0;
+  --bdr:#d4d0ca; --bdr-s:#e8e5e0;
+  --tx:#1a1816; --tx2:#6e6864; --tx3:#a09a94;
+  --ac:#b07840; --ac-dim:rgba(176,120,64,0.1); --ac-tx:#fff;
+  --ok:#2e9e54; --ok-dim:rgba(46,158,84,0.08);
+  --err:#c44040; --err-dim:rgba(196,64,64,0.08);
+  --sh:0 1px 4px rgba(0,0,0,0.06); --sh-lg:0 4px 16px rgba(0,0,0,0.08);
+  --g1:#b07840; --g2:#4888a8; --g3:#5a9e48; --g4:#a84888; --g5:#48a888; --g6:#8848a8;
+  color-scheme:light;
+}}
+:root[data-theme="light"]{
+  --bg:#f2f0ec; --bg-s:#fff; --bg-el:#fff; --bg-in:#e8e5e0;
+  --bdr:#d4d0ca; --bdr-s:#e8e5e0;
+  --tx:#1a1816; --tx2:#6e6864; --tx3:#a09a94;
+  --ac:#b07840; --ac-dim:rgba(176,120,64,0.1); --ac-tx:#fff;
+  --ok:#2e9e54; --ok-dim:rgba(46,158,84,0.08);
+  --err:#c44040; --err-dim:rgba(196,64,64,0.08);
+  --sh:0 1px 4px rgba(0,0,0,0.06); --sh-lg:0 4px 16px rgba(0,0,0,0.08);
+  --g1:#b07840; --g2:#4888a8; --g3:#5a9e48; --g4:#a84888; --g5:#48a888; --g6:#8848a8;
+  color-scheme:light;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:var(--f-b);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:100}
+h1,h2,h3{font-family:var(--f-d);margin:0}
+button{font-family:var(--f-b);cursor:pointer}
+input[type="range"]{cursor:pointer}
+
+/* ─── Setup ─── */
+.setup{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;padding-block:32px}
+.setup-card{background:var(--bg-s);border:1px solid var(--bdr);border-radius:var(--r-l);padding:40px 32px;max-width:400px;width:100%;box-shadow:var(--sh-lg)}
+.setup-logo{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+.setup-logo svg{width:32px;height:32px;color:var(--ac)}
+.setup-logo h1{font-size:28px;font-weight:700;letter-spacing:-0.02em}
+.setup-sub{color:var(--tx2);margin:0 0 28px;font-size:15px}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px}
+.field input{display:block;width:100%;padding:10px 14px;background:var(--bg-in);border:1px solid var(--bdr);border-radius:var(--r-s);color:var(--tx);font-family:var(--f-b);font-size:14px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--ac)}
+.field input::placeholder{color:var(--tx3)}
+.hint{font-size:12px;color:var(--tx3);margin:0 0 24px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border:none;border-radius:var(--r-s);font-size:14px;font-weight:500;transition:all .15s}
+.btn-p{background:var(--ac);color:var(--ac-tx);width:100%}
+.btn-p:hover{opacity:.9}.btn-p:disabled{opacity:.5;cursor:not-allowed}
+.btn-s{background:var(--bg-el);color:var(--tx);border:1px solid var(--bdr)}
+.btn-s:hover{background:var(--bdr-s)}
+.btn-sm{padding:5px 12px;font-size:12px;border-radius:var(--r-s);border:1px solid var(--bdr);background:transparent;color:var(--tx2);font-weight:500;transition:all .15s}
+.btn-sm:hover{border-color:var(--tx2);color:var(--tx)}
+.btn-sm.active{background:var(--ac-dim);border-color:var(--ac);color:var(--ac)}
+.btn-dg{color:var(--err);border-color:var(--err-dim)}
+.btn-dg:hover{background:var(--err-dim);border-color:var(--err)}
+.err-msg{color:var(--err);font-size:13px;margin-top:12px}
+.btn-i{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:1px solid var(--bdr);border-radius:var(--r-s);background:transparent;color:var(--tx2);transition:all .15s;padding:0;flex-shrink:0}
+.btn-i:hover{color:var(--tx);border-color:var(--tx2)}
+.btn-i svg{width:16px;height:16px}
+
+/* ─── Header ─── */
+.hdr{display:flex;align-items:center;gap:12px;padding-block:16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.hdr-logo{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
+.hdr-logo svg{width:24px;height:24px;color:var(--ac);flex-shrink:0}
+.hdr-logo h1{font-size:20px;font-weight:700;letter-spacing:-0.01em}
+.st-pill{display:flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:var(--ok-dim);color:var(--ok)}
+.st-pill.off{background:var(--err-dim);color:var(--err)}
+.st-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ─── Sections ─── */
+.sec{margin-bottom:28px}
+.sec-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px}
+.sec-h h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;color:var(--tx2)}
+
+/* ─── Groups ─── */
+.g-list{display:flex;flex-direction:column;gap:10px}
+.g-card{background:var(--bg-s);border:1px solid var(--bdr);border-left:3px solid var(--gc,var(--ac));border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh)}
+.g-hd{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.g-name{font-family:var(--f-d);font-weight:600;font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-cnt{font-size:12px;color:var(--tx3);flex-shrink:0}
+.g-np{font-size:12px;color:var(--tx2);margin-bottom:10px;display:flex;align-items:center;gap:6px;min-height:18px}
+.g-np-icon{flex-shrink:0;opacity:.6}
+.g-np-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.g-ctrls{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:auto}
+.g-ctrls button{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:transparent;color:var(--tx2);padding:0;transition:all .15s;cursor:pointer}
+.g-ctrls button:hover{color:var(--tx);background:var(--bg-el)}
+.g-ctrls button svg{width:14px;height:14px}
+.g-ctrls .g-pp{background:var(--ac-dim);color:var(--ac)}
+.g-ctrls .g-pp:hover{background:var(--ac);color:var(--ac-tx)}
+.g-members{display:flex;flex-direction:column;gap:6px}
+.g-m{display:flex;align-items:center;gap:8px;font-size:13px}
+.g-m .crown{color:var(--ac);font-size:13px;width:16px;text-align:center;flex-shrink:0}
+.g-m .ph{width:16px;flex-shrink:0}
+.g-m .mn{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-m input[type="range"]{flex:0 0 80px}
+.g-m .mv{font-size:11px;color:var(--tx3);width:30px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+.g-m .btn-i{width:22px;height:22px;border:none}.g-m .btn-i svg{width:11px;height:11px}
+.g-empty{text-align:center;padding:24px 20px;color:var(--tx3);font-size:13px;background:var(--bg-s);border:1px dashed var(--bdr);border-radius:var(--r)}
+
+/* ─── Speaker Grid ─── */
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.sp{background:var(--bg-s);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;box-shadow:var(--sh);transition:border-color .2s,box-shadow .2s;position:relative}
+.sp.has-g{border-left:3px solid var(--gc,var(--bdr))}
+.sp.playing{border-color:color-mix(in srgb,var(--ok) 40%,var(--bdr));box-shadow:var(--sh),0 0 0 1px var(--ok-dim)}
+.sp.playing.has-g{border-left-color:var(--gc,var(--ok))}
+.sp.sel{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac-dim)}
+.sp[data-selectable]{cursor:pointer}
+.sp-hd{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.sp-st{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sp-st.playing{background:var(--ok);animation:pulse 2s ease infinite}
+.sp-st.paused{background:var(--ac)}
+.sp-st.idle,.sp-st.off,.sp-st.standby{background:var(--tx3)}
+.sp-st.unavailable{background:var(--err)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sp-nm{font-size:15px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-badge{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--gc,var(--ac));color:#fff;font-weight:700;flex-shrink:0}
+.sp-chk{width:20px;height:20px;border:2px solid var(--bdr);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.sp-chk.on{background:var(--ac);border-color:var(--ac)}
+.sp-chk.on::after{content:'✓';color:var(--ac-tx);font-size:12px;font-weight:700}
+.sp-np{margin-bottom:12px;min-height:34px}
+.sp-title{display:block;font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-artist{display:block;font-size:12px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sp-np.empty .sp-title{color:var(--tx3);font-weight:400}
+
+/* ─── Volume ─── */
+.sp-vol{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.sp-vol .btn-i{width:28px;height:28px;border:none}.sp-vol .btn-i svg{width:16px;height:16px}
+input[type="range"]{-webkit-appearance:none;appearance:none;flex:1;height:4px;border-radius:2px;background:var(--bdr);outline:none;min-width:0}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ac);border:none;box-shadow:0 0 4px rgba(0,0,0,.3)}
+input[type="range"]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--ac);border:none;box-shadow:0 0 4px rgba(0,0,0,.3)}
+input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:2px}
+input[type="range"]::-moz-range-track{height:4px;border-radius:2px;background:var(--bdr)}
+input[type="range"].muted::-webkit-slider-thumb{opacity:.4}
+input[type="range"].muted::-moz-range-thumb{opacity:.4}
+.vv{font-size:11px;color:var(--tx3);width:30px;text-align:right;font-variant-numeric:tabular-nums;flex-shrink:0}
+
+/* ─── Transport ─── */
+.sp-ctrl{display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:10px}
+.cb{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border:none;border-radius:50%;background:transparent;color:var(--tx2);padding:0;transition:all .15s}
+.cb:hover{color:var(--tx);background:var(--bg-el)}
+.cb svg{width:16px;height:16px}
+.cb-pp{width:40px;height:40px;background:var(--ac-dim);color:var(--ac)}
+.cb-pp:hover{background:var(--ac);color:var(--ac-tx)}
+.cb-pp svg{width:18px;height:18px}
+
+/* ─── Source ─── */
+.sp-src{padding-top:10px;border-top:1px solid var(--bdr-s)}
+.sp-src select{width:100%;padding:6px 10px;background:var(--bg-in);border:1px solid var(--bdr);border-radius:var(--r-s);color:var(--tx);font-family:var(--f-b);font-size:12px;outline:none;cursor:pointer}
+.sp-src select:focus{border-color:var(--ac)}
+
+/* ─── Action Bar ─── */
+.abar{position:fixed;bottom:0;left:0;right:0;background:var(--bg-el);border-top:1px solid var(--bdr);
+  padding:12px max(16px,env(safe-area-inset-left,0px));
+  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:50;animation:slideUp .2s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.abar .si{flex:1;font-size:14px;font-weight:500}
+
+/* ─── Modal ─── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:60;
+  padding:max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--bg-s);border:1px solid var(--bdr);border-radius:var(--r-l);padding:24px;max-width:420px;width:100%;box-shadow:var(--sh-lg);max-height:80vh;overflow-y:auto}
+.modal h2{font-size:18px;margin-bottom:16px}
+.modal-foot{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* ─── Misc ─── */
+.loading{display:flex;align-items:center;justify-content:center;padding:60px 20px;color:var(--tx3);font-size:14px;gap:10px}
+.spinner{width:18px;height:18px;border:2px solid var(--bdr);border-top-color:var(--ac);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:640px){.sp-grid{grid-template-columns:1fr}.g-m input[type="range"]{flex:0 0 60px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+</style>
+
+<!-- ═══ SETUP ═══ -->
+<div id="setup" class="setup">
+  <div class="setup-card">
+    <div class="setup-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+      <h1>ASound</h1>
+    </div>
+    <p class="setup-sub">Connect to Home Assistant to control your speakers</p>
+    <form id="sf">
+      <div class="field">
+        <label for="ha-url">Home Assistant URL</label>
+        <input type="url" id="ha-url" placeholder="http://homeassistant.local:8123" required>
+      </div>
+      <div class="field">
+        <label for="ha-tok">Long-lived Access Token</label>
+        <input type="password" id="ha-tok" placeholder="eyJhbGci..." required>
+      </div>
+      <p class="hint">Create one at your HA Profile &#8594; Security &#8594; Long-Lived Access Tokens</p>
+      <button type="submit" class="btn btn-p" id="cbtn">Connect</button>
+      <p id="serr" class="err-msg" hidden></p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" hidden>
+  <header class="hdr">
+    <div class="hdr-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+      <h1>ASound</h1>
+    </div>
+    <div id="stpill" class="st-pill"><span class="st-dot"></span><span id="sttxt">Connected</span></div>
+    <button class="btn-i" id="setbtn" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </header>
+
+  <section class="sec">
+    <div class="sec-h"><h2>Speaker Groups</h2><button class="btn-sm" id="mgbtn">Manage Groups</button></div>
+    <div id="gcont" class="g-list"></div>
+  </section>
+
+  <section class="sec">
+    <div class="sec-h"><h2>All Speakers</h2><span id="sp-count" style="font-size:12px;color:var(--tx3)"></span></div>
+    <div id="sgrid" class="sp-grid"></div>
+  </section>
+
+  <div id="bspc" hidden style="height:80px"></div>
+</div>
+
+<!-- ═══ ACTION BAR ═══ -->
+<div id="abar" class="abar" hidden>
+  <span class="si" id="si">Select speakers to group</span>
+  <button class="btn btn-p" id="gbtn" disabled style="width:auto">Create Group</button>
+  <button class="btn btn-s" id="xcbtn" style="width:auto">Cancel</button>
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div id="setov" class="modal-bg" hidden>
+  <div class="modal">
+    <h2>Settings</h2>
+    <div class="field"><label>Home Assistant URL</label><input type="url" id="surl" disabled></div>
+    <div class="field"><label>Visible Speakers</label><div id="svis"></div></div>
+    <div class="modal-foot">
+      <button class="btn btn-s" id="dcbtn" style="width:auto;color:var(--err)">Disconnect</button>
+      <button class="btn btn-p" id="clsbtn" style="width:auto">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SP = new Map();
+let mode = 'normal', ws = null, mid = 1, haUrl = '', haToken = '';
+let reconTimer = null;
+const sel = new Set();
+let hidden = new Set();
+const GC = ['var(--g1)','var(--g2)','var(--g3)','var(--g4)','var(--g5)','var(--g6)'];
+
+const I = {
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6,4 20,12 6,20"/></svg>',
+  pause:'<svg viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="4" width="4" height="16" rx="1"/><rect x="15" y="4" width="4" height="16" rx="1"/></svg>',
+  next:'<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="4,4 16,12 4,20"/><rect x="17" y="4" width="3" height="16" rx="1"/></svg>',
+  prev:'<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="20,4 8,12 20,20"/><rect x="4" y="4" width="3" height="16" rx="1"/></svg>',
+  vH:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 010 7.07"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>',
+  vL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>',
+  vO:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/></svg>',
+  vM:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="11,5 6,9 2,9 2,15 6,15 11,19" fill="currentColor" stroke="none"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>',
+  x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+};
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function vIcon(muted,vol){return muted?I.vM:vol>50?I.vH:vol>0?I.vL:I.vO}
+function updateSliderFill(el){const v=el.value;const max=el.max||100;const pct=(v/max)*100;el.style.background=`linear-gradient(to right,var(--ac) ${pct}%,var(--bdr) ${pct}%)`}
+
+/* ═══ CONNECTION ═══ */
+function connect(url,token){
+  return new Promise((res,rej)=>{
+    haUrl=url; haToken=token;
+    const wsu=url.replace(/^http/,'ws').replace(/\/$/,'')+'/api/websocket';
+    try{ws=new WebSocket(wsu)}catch(e){return rej(e)}
+    const to=setTimeout(()=>{ws.close();rej(new Error('Connection timed out'))},10000);
+    ws.onmessage=ev=>{
+      let m; try{m=JSON.parse(ev.data)}catch{return}
+      if(m.type==='auth_required')ws.send(JSON.stringify({type:'auth',access_token:token}));
+      else if(m.type==='auth_ok'){clearTimeout(to);setSt(true);ws.send(JSON.stringify({id:mid++,type:'get_states'}));ws.send(JSON.stringify({id:mid++,type:'subscribe_events',event_type:'state_changed'}));res()}
+      else if(m.type==='auth_invalid'){clearTimeout(to);rej(new Error(m.message||'Invalid token'))}
+      else if(m.type==='result'&&Array.isArray(m.result))initStates(m.result);
+      else if(m.type==='event'&&m.event?.event_type==='state_changed')onStateChange(m.event.data);
+    };
+    ws.onclose=()=>{clearTimeout(to);setSt(false);if(haToken)reconTimer=setTimeout(()=>connect(haUrl,haToken).catch(()=>{}),5000)};
+    ws.onerror=()=>clearTimeout(to);
+  });
+}
+
+function disc(){haToken='';if(reconTimer)clearTimeout(reconTimer);if(ws)ws.close();SP.clear();
+  try{localStorage.removeItem('asound')}catch{}
+  $('app').hidden=true;$('setup').hidden=false;$('setov').hidden=true}
+
+function initStates(states){for(const s of states)if(s.entity_id.startsWith('media_player.'))SP.set(s.entity_id,s);render()}
+function onStateChange(d){const{entity_id:eid,new_state:ns}=d;if(!eid.startsWith('media_player.'))return;if(ns)SP.set(eid,ns);else SP.delete(eid);render()}
+function svc(dom,srv,eid,data={}){if(!ws||ws.readyState!==1)return;ws.send(JSON.stringify({id:mid++,type:'call_service',domain:dom,service:srv,target:{entity_id:eid},service_data:data}))}
+function setSt(on){const p=$('stpill'),t=$('sttxt');p.classList.toggle('off',!on);t.textContent=on?'Connected':'Reconnecting…'}
+
+/* ═══ GROUPS ═══ */
+function getGroups(){
+  const seen=new Set(), groups=[];
+  for(const[id,sp]of SP){
+    if(seen.has(id)||hidden.has(id))continue;
+    const gm=sp.attributes?.group_members;
+    if(gm&&gm.length>1){groups.push({master:gm[0],members:[...gm]});gm.forEach(m=>seen.add(m))}
+  }
+  return groups;
+}
+
+function groupSel(){const s=[...sel];if(s.length<2)return;svc('media_player','join',s[0],{group_members:s});exitGM()}
+function ungroupAll(master){const g=getGroups().find(gr=>gr.master===master);if(!g)return;for(const m of g.members)if(m!==master)svc('media_player','unjoin',m)}
+function ungroupOne(eid){svc('media_player','unjoin',eid)}
+
+/* ═══ CONTROLS ═══ */
+const vt={};
+function setVol(eid,v){clearTimeout(vt[eid]);vt[eid]=setTimeout(()=>svc('media_player','volume_set',eid,{volume_level:v/100}),120)}
+function togMute(eid){const sp=SP.get(eid);if(sp)svc('media_player','volume_mute',eid,{is_volume_muted:!sp.attributes?.is_volume_muted})}
+function pp(eid){svc('media_player','media_play_pause',eid)}
+function nx(eid){svc('media_player','media_next_track',eid)}
+function pv(eid){svc('media_player','media_previous_track',eid)}
+function sSrc(eid,src){svc('media_player','select_source',eid,{source:src})}
+
+/* ═══ GROUP MODE ═══ */
+function enterGM(){mode='grouping';sel.clear();$('abar').hidden=false;$('bspc').hidden=false;$('mgbtn').textContent='Cancel';$('mgbtn').classList.add('active');updAB();render()}
+function exitGM(){mode='normal';sel.clear();$('abar').hidden=true;$('bspc').hidden=true;$('mgbtn').textContent='Manage Groups';$('mgbtn').classList.remove('active');render()}
+function togSel(eid){if(sel.has(eid))sel.delete(eid);else sel.add(eid);updAB();render()}
+function updAB(){const n=sel.size;$('si').textContent=n===0?'Select speakers to group':`${n} speaker${n>1?'s':''} selected`;$('gbtn').disabled=n<2}
+
+/* ═══ RENDER ═══ */
+function $(id){return document.getElementById(id)}
+
+function render(){renderGroups();renderSpeakers()}
+
+function renderGroups(){
+  const el=$('gcont'), groups=getGroups();
+  if(!groups.length){el.innerHTML='<div class="g-empty">No active groups &mdash; use Manage Groups to create one</div>';return}
+  el.innerHTML=groups.map((g,i)=>{
+    const c=GC[i%GC.length], ms=SP.get(g.master), mn=ms?.attributes?.friendly_name||g.master.replace('media_player.','');
+    const title=ms?.attributes?.media_title||'', artist=ms?.attributes?.media_artist||'';
+    const isPlaying=ms?.state==='playing';
+    const npText=title?(artist?`${esc(title)} &mdash; ${esc(artist)}`:esc(title)):'Nothing playing';
+    return `<div class="g-card" style="--gc:${c}">
+      <div class="g-hd">
+        <span class="g-name">${esc(mn)}&rsquo;s Group</span>
+        <span class="g-cnt">${g.members.length} speakers</span>
+        <button class="btn-sm btn-dg" data-uga="${g.master}">Ungroup</button>
+      </div>
+      <div class="g-np">
+        <span class="g-np-icon">${I.note}</span>
+        <span class="g-np-text">${npText}</span>
+        <div class="g-ctrls">
+          <button data-gpv="${g.master}">${I.prev}</button>
+          <button class="g-pp" data-gpp="${g.master}">${isPlaying?I.pause:I.play}</button>
+          <button data-gnx="${g.master}">${I.next}</button>
+        </div>
+      </div>
+      <div class="g-members">${g.members.map(m=>{
+        const sp=SP.get(m), name=sp?.attributes?.friendly_name||m.replace('media_player.','');
+        const vol=Math.round((sp?.attributes?.volume_level||0)*100), im=m===g.master;
+        return `<div class="g-m">
+          ${im?'<span class="crown">&#9819;</span>':'<span class="ph"></span>'}
+          <span class="mn">${esc(name)}</span>
+          <input type="range" min="0" max="100" value="${vol}" data-vol="${m}" style="background:linear-gradient(to right,var(--ac) ${vol}%,var(--bdr) ${vol}%)">
+          <span class="mv">${vol}%</span>
+          ${!im?`<button class="btn-i" data-uj="${m}" title="Remove">${I.x}</button>`:''}
+        </div>`}).join('')}
+      </div>
+    </div>`}).join('');
+}
+
+function renderSpeakers(){
+  const grid=$('sgrid'), groups=getGroups(), gmap=new Map();
+  groups.forEach((g,i)=>g.members.forEach(m=>gmap.set(m,i)));
+  const entries=[...SP.entries()].filter(([id])=>!hidden.has(id)).sort((a,b)=>{
+    const na=a[1].attributes?.friendly_name||a[0], nb=b[1].attributes?.friendly_name||b[0];
+    return na.localeCompare(nb)});
+  $('sp-count').textContent=entries.length?`${entries.length} speaker${entries.length>1?'s':''}`:'';
+  if(!entries.length){grid.innerHTML='<div class="loading"><span class="spinner"></span> Waiting for speakers&hellip;</div>';return}
+  grid.innerHTML=entries.map(([eid,sp])=>{
+    const name=sp.attributes?.friendly_name||eid.replace('media_player.','');
+    const vol=Math.round((sp.attributes?.volume_level||0)*100), muted=sp.attributes?.is_volume_muted;
+    const title=sp.attributes?.media_title||'', artist=sp.attributes?.media_artist||'';
+    const source=sp.attributes?.source||'', sources=sp.attributes?.source_list||[];
+    const gi=gmap.get(eid), hasG=gi!==undefined, color=hasG?GC[gi%GC.length]:'';
+    const isSel=sel.has(eid), isP=sp.state==='playing';
+    const mEid=hasG?getGroups()[gi]?.master:null, isM=eid===mEid;
+    return `<div class="sp${isP?' playing':''}${hasG?' has-g':''}${isSel?' sel':''}"
+      style="${color?'--gc:'+color:''}" data-entity="${eid}" ${mode==='grouping'?'data-selectable':''}>
+      <div class="sp-hd">
+        <div class="sp-st ${sp.state}"></div>
+        <h3 class="sp-nm">${esc(name)}</h3>
+        ${hasG?`<span class="sp-badge" style="background:${color}">${isM?'&#9819;':'&#9679;'}</span>`:''}
+        ${mode==='grouping'?`<div class="sp-chk${isSel?' on':''}"></div>`:''}
+      </div>
+      <div class="sp-np${!title&&!artist?' empty':''}">
+        <span class="sp-title">${title?esc(title):'Not playing'}</span>
+        ${artist?`<span class="sp-artist">${esc(artist)}</span>`:''}
+      </div>
+      <div class="sp-vol">
+        <button class="btn-i" data-mute="${eid}" title="${muted?'Unmute':'Mute'}">${vIcon(muted,vol)}</button>
+        <input type="range" min="0" max="100" value="${vol}" data-vol="${eid}" ${muted?'class="muted"':''} style="background:linear-gradient(to right,var(--ac) ${vol}%,var(--bdr) ${vol}%)">
+        <span class="vv">${vol}%</span>
+      </div>
+      <div class="sp-ctrl">
+        <button class="cb" data-prev="${eid}">${I.prev}</button>
+        <button class="cb cb-pp" data-pp="${eid}">${isP?I.pause:I.play}</button>
+        <button class="cb" data-next="${eid}">${I.next}</button>
+      </div>
+      ${sources.length?`<div class="sp-src"><select data-source="${eid}">${sources.map(s=>`<option${s===source?' selected':''}>${esc(s)}</option>`).join('')}</select></div>`:''}
+    </div>`}).join('');
+}
+
+/* ═══ EVENTS ═══ */
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-selectable]');
+  if(t&&mode==='grouping'){if(e.target.closest('button,input,select,.sp-vol,.sp-ctrl,.sp-src'))return;togSel(t.dataset.entity);return}
+  let el;
+  if(el=e.target.closest('[data-uga]')){ungroupAll(el.dataset.uga);return}
+  if(el=e.target.closest('[data-uj]')){ungroupOne(el.dataset.uj);return}
+  if(el=e.target.closest('[data-pp]')){e.stopPropagation();pp(el.dataset.pp);return}
+  if(el=e.target.closest('[data-gpp]')){pp(el.dataset.gpp);return}
+  if(el=e.target.closest('[data-next]')){e.stopPropagation();nx(el.dataset.next);return}
+  if(el=e.target.closest('[data-gnx]')){nx(el.dataset.gnx);return}
+  if(el=e.target.closest('[data-prev]')){e.stopPropagation();pv(el.dataset.prev);return}
+  if(el=e.target.closest('[data-gpv]')){pv(el.dataset.gpv);return}
+  if(el=e.target.closest('[data-mute]')){e.stopPropagation();togMute(el.dataset.mute);return}
+});
+
+document.addEventListener('input',e=>{
+  const v=e.target.closest('input[data-vol]');
+  if(v){e.stopPropagation();const val=parseInt(v.value);updateSliderFill(v);
+    const lbl=v.nextElementSibling;if(lbl)lbl.textContent=val+'%';setVol(v.dataset.vol,val)}
+});
+
+document.addEventListener('change',e=>{
+  const s=e.target.closest('select[data-source]');
+  if(s){e.stopPropagation();sSrc(s.dataset.source,s.value)}
+});
+
+/* ═══ UI WIRING ═══ */
+$('sf').addEventListener('submit',async e=>{
+  e.preventDefault();const url=$('ha-url').value.trim().replace(/\/$/,''),tok=$('ha-tok').value.trim();
+  const err=$('serr'),btn=$('cbtn');err.hidden=true;btn.disabled=true;btn.textContent='Connecting…';
+  try{await connect(url,tok);try{localStorage.setItem('asound',JSON.stringify({url,token:tok}))}catch{}
+    $('setup').hidden=true;$('app').hidden=false;$('surl').value=url;
+  }catch(ex){err.textContent=ex.message||'Connection failed';err.hidden=false}
+  finally{btn.disabled=false;btn.textContent='Connect'}
+});
+
+$('mgbtn').addEventListener('click',()=>{if(mode==='grouping')exitGM();else enterGM()});
+$('gbtn').addEventListener('click',groupSel);
+$('xcbtn').addEventListener('click',exitGM);
+
+$('setbtn').addEventListener('click',()=>{$('setov').hidden=false;renderVis()});
+$('clsbtn').addEventListener('click',()=>$('setov').hidden=true);
+$('setov').addEventListener('click',e=>{if(e.target===$('setov'))$('setov').hidden=true});
+$('dcbtn').addEventListener('click',disc);
+
+function renderVis(){
+  const el=$('svis');
+  el.innerHTML=[...SP.entries()].sort((a,b)=>(a[1].attributes?.friendly_name||a[0]).localeCompare(b[1].attributes?.friendly_name||b[0]))
+    .map(([id,sp])=>{const n=sp.attributes?.friendly_name||id;const h=hidden.has(id);
+      return `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:13px;cursor:pointer">
+        <input type="checkbox" ${!h?'checked':''} data-vis="${id}"> ${esc(n)}</label>`}).join('');
+}
+$('svis').addEventListener('change',e=>{
+  const cb=e.target.closest('[data-vis]');if(!cb)return;
+  if(cb.checked)hidden.delete(cb.dataset.vis);else hidden.add(cb.dataset.vis);
+  try{localStorage.setItem('asound_h',JSON.stringify([...hidden]))}catch{}render()});
+
+/* ═══ INIT ═══ */
+(async()=>{
+  try{hidden=new Set(JSON.parse(localStorage.getItem('asound_h')||'[]'))}catch{}
+  let saved;try{saved=JSON.parse(localStorage.getItem('asound'))}catch{}
+  if(saved?.url&&saved?.token){
+    $('ha-url').value=saved.url;$('ha-tok').value=saved.token;
+    $('setup').hidden=true;$('app').hidden=false;$('surl').value=saved.url;
+    $('sgrid').innerHTML='<div class="loading"><span class="spinner"></span> Connecting&hellip;</div>';
+    try{await connect(saved.url,saved.token)}catch{$('app').hidden=true;$('setup').hidden=false}
+  }
+})();
+</script>
