@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ASound installer — copies theme, package, and dashboard into a
-# Home Assistant config directory, locally or over SSH.
+# ASound installer — copies the custom card (and optionally the theme)
+# into a Home Assistant config directory, locally or over SSH.
 #
 # Local:   ./install.sh /path/to/ha-config
 # Remote:  ./install.sh user@host /path/to/ha-config
-#
-# If the config path is omitted, common locations are tried
-# (/config, /homeassistant, ~/.homeassistant).
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
@@ -39,7 +36,7 @@ fi
 
 HA_CONFIG="${1:-}"
 
-# ── Helper: run a command locally or remotely ──
+# ── Helpers ──
 
 run() {
   if [[ -n "$REMOTE" ]]; then
@@ -88,31 +85,17 @@ echo ""
 
 # ── Copy files ──
 
-run "mkdir -p $HA_CONFIG/packages $HA_CONFIG/themes"
+run "mkdir -p $HA_CONFIG/www $HA_CONFIG/themes"
 
-copy_file "$SCRIPT_DIR/packages/asound.yaml" "$HA_CONFIG/packages/asound.yaml"
-echo "  ✔ packages/asound.yaml"
+copy_file "$SCRIPT_DIR/www/asound-card.js" "$HA_CONFIG/www/asound-card.js"
+echo "  ✔ www/asound-card.js"
 
 copy_file "$SCRIPT_DIR/themes/asound.yaml" "$HA_CONFIG/themes/asound.yaml"
 echo "  ✔ themes/asound.yaml"
 
-copy_file "$SCRIPT_DIR/dashboard.yaml" "$HA_CONFIG/asound_dashboard.yaml"
-echo "  ✔ asound_dashboard.yaml"
-
-# ── Patch configuration.yaml if needed ──
+# ── Patch configuration.yaml for themes if needed ──
 
 CONFIG_FILE="$HA_CONFIG/configuration.yaml"
-
-if ! run "grep -qE '^\s*packages\s*:' $CONFIG_FILE"; then
-  if run "grep -qE '^homeassistant\s*:' $CONFIG_FILE"; then
-    run "sed -i '/^homeassistant\s*:/a\\  packages: !include_dir_named packages' $CONFIG_FILE"
-  else
-    run "printf '\nhomeassistant:\n  packages: !include_dir_named packages\n' >> $CONFIG_FILE"
-  fi
-  echo "  ✔ Added packages include to configuration.yaml"
-else
-  echo "  · packages already configured"
-fi
 
 if ! run "grep -qE '^\s*themes\s*:' $CONFIG_FILE"; then
   if run "grep -qE '^frontend\s*:' $CONFIG_FILE"; then
@@ -129,16 +112,18 @@ fi
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Installed! Two things left:"
+echo "  Installed! Next steps:"
 echo ""
-echo "  1. Edit $TARGET/packages/asound.yaml"
-echo "     Replace every media_player.speaker_N with"
-echo "     your actual speaker entity IDs."
+echo "  1. Add the card as a resource in HA:"
+echo "     Settings → Dashboards → ⋮ → Resources → Add"
+echo "     URL: /local/asound-card.js"
+echo "     Type: JavaScript Module"
 echo ""
-echo "  2. Restart Home Assistant."
+echo "  2. Restart Home Assistant (or reload resources)."
 echo ""
-echo "  Then:"
-echo "  • Theme: Profile → Theme → ASound"
-echo "  • Dashboard: Settings → Dashboards → Add Dashboard"
-echo "    → YAML mode → paste contents of asound_dashboard.yaml"
+echo "  3. Add the card to any dashboard:"
+echo "     Edit dashboard → Add Card → search 'ASound'"
+echo "     Pick your main speaker entity and add speakers."
+echo ""
+echo "  4. Theme (optional): Profile → Theme → ASound"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
