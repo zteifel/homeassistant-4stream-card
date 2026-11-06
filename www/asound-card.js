@@ -650,8 +650,9 @@ class AsoundMediaCard extends HTMLElement {
     const artEntId = this._config.artwork_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
+    const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
 
-    if (fromMini && artEntId) {
+    if (artEntId && (!isActive || fromMini)) {
       const artEnt = this._hass.states[artEntId];
       if (artEnt) {
         const speakerName = mainState?.attributes?.friendly_name || mainEnt;
