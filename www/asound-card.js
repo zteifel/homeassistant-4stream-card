@@ -84,7 +84,7 @@ const STYLES = `
   .controls {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 2px;
     padding: 4px 16px;
   }
@@ -154,12 +154,18 @@ const STYLES = `
     border-radius: 50%;
     background: var(--art-text, #fff);
     border: none;
+    margin-top: 0;
   }
   input[type=range]::-moz-range-thumb {
     width: 16px; height: 16px;
     border-radius: 50%;
     background: var(--art-text, #fff);
     border: none;
+  }
+  input[type=range]::-moz-range-progress {
+    background: rgba(128,128,128,0.7);
+    height: 8px;
+    border-radius: 4px;
   }
 
   /* ── Speaker group panel ── */
@@ -614,7 +620,7 @@ class AsoundMediaCard extends HTMLElement {
       const mainHassVol = Math.round((mainSp?.attributes?.volume_level ?? 0) * 100);
       const mainVol = this._resolveVol(this._config.entity, mainHassVol);
       const volSlider = q('input[data-vol="__group__"]');
-      if (volSlider) volSlider.value = mainVol;
+      if (volSlider) { volSlider.value = mainVol; this._updateSliderFill(volSlider); }
       const volVal = q('.vol-val');
       if (volVal) volVal.textContent = mainVol + '%';
 
@@ -625,7 +631,7 @@ class AsoundMediaCard extends HTMLElement {
         const hassVol = Math.round((sp.attributes.volume_level ?? 0) * 100);
         const spVol = this._resolveVol(spId, hassVol);
         const spSlider = q(`input[data-vol="${spId}"]`);
-        if (spSlider) spSlider.value = spVol;
+        if (spSlider) { spSlider.value = spVol; this._updateSliderFill(spSlider); }
         const spVal = spSlider?.nextElementSibling;
         if (spVal) spVal.textContent = spVol + '%';
       }
@@ -656,6 +662,7 @@ class AsoundMediaCard extends HTMLElement {
     this._card.addEventListener('input', (e) => {
       const slider = e.target.closest('input[data-vol]');
       if (!slider) return;
+      this._updateSliderFill(slider);
       this._sliderActive = true;
       clearTimeout(this._sliderEndTimer);
       this._sliderEndTimer = setTimeout(() => {
@@ -816,6 +823,12 @@ class AsoundMediaCard extends HTMLElement {
       tb = Math.round(tb * f);
     }
     return `rgb(${tr},${tg},${tb})`;
+  }
+
+  _updateSliderFill(slider) {
+    if (!slider) return;
+    const pct = slider.value;
+    slider.style.background = `linear-gradient(to right, rgba(128,128,128,0.7) ${pct}%, rgba(128,128,128,0.3) ${pct}%)`;
   }
 
   _resolveVol(entityId, hassVol) {
