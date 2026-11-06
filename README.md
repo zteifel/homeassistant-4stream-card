@@ -4,6 +4,12 @@ A custom Home Assistant Lovelace card for controlling LinkPlay/4stream WiFi spea
 
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Custom%20Card-blue)
 
+## Screenshots
+
+| Player | Speaker Group |
+|--------|--------------|
+| ![Player](images/screenshot-compact.png) | ![Speaker Group](images/screenshot-expanded.png) |
+
 ## Features
 
 - Album artwork from Spotify with color-extracted background and adaptive text colors
