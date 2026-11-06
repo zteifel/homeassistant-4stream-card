@@ -421,7 +421,7 @@ class AsoundMediaCard extends HTMLElement {
     return ((active && !isFollower) || this._forceExpanded) ? 3 : 1;
   }
 
-  _speakerMatchesSource(speakerName, sourceName) {
+  _matchesSource(speakerName, sourceName) {
     if (!speakerName || !sourceName) return false;
     const a = speakerName.toLowerCase();
     const b = sourceName.toLowerCase();
@@ -438,12 +438,6 @@ class AsoundMediaCard extends HTMLElement {
     const speakers = this._config.speakers || [];
     const speakerName = a.friendly_name || mainId;
 
-    // Check if this speaker is the active Spotify Connect target
-    const spotifySource = artEnt?.attributes?.source || '';
-    const isSpotifyTarget = this._speakerMatchesSource(speakerName, spotifySource);
-    const spotifyPlaying = artEnt?.state === 'playing';
-
-    // LinkPlay group_members (may be empty if grouping is via Spotify Connect)
     const mainGm = a.group_members || [];
     const groupSet = new Set(mainGm);
     for (const spId of speakers) {
@@ -454,15 +448,20 @@ class AsoundMediaCard extends HTMLElement {
       }
     }
 
-    let isPlaying = entity.state === 'playing';
-    let isPaused = entity.state === 'paused';
+    // Use source entity to supplement HA's broken LinkPlay state
+    const srcPlaying = artEnt?.state === 'playing' || artEnt?.state === 'paused';
+    const srcSource = artEnt?.attributes?.source || '';
+    const isSrcTarget = srcPlaying && this._matchesSource(speakerName, srcSource);
+
+    let isPlaying = entity.state === 'playing' || (isSrcTarget && artEnt?.state === 'playing');
+    let isPaused = entity.state === 'paused' || (isSrcTarget && artEnt?.state === 'paused');
     let isActive = isPlaying || isPaused;
 
-    // If this speaker is playing but is NOT the Spotify target, it's a follower
-    const isFollower = isActive && spotifyPlaying && !isSpotifyTarget && !!spotifySource
+    // Follower: HA says playing, but source entity targets a different speaker
+    const isFollower = entity.state === 'playing' && srcPlaying && !isSrcTarget
       && speakers.some(spId => {
         const sp = this._hass.states[spId];
-        return this._speakerMatchesSource(sp?.attributes?.friendly_name, spotifySource);
+        return this._matchesSource(sp?.attributes?.friendly_name, srcSource);
       });
 
     const pp = this._pendingPlay;
@@ -479,7 +478,7 @@ class AsoundMediaCard extends HTMLElement {
 
     return {
       entity, a, isPlaying, isPaused, isActive, isFollower,
-      name: speakerName,
+      name: a.friendly_name || mainId,
       showFull: (isActive && !isFollower) || this._forceExpanded,
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
@@ -742,11 +741,20 @@ class AsoundMediaCard extends HTMLElement {
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
     const realState = mainState?.state;
-    const isActive = realState === 'playing' || realState === 'paused';
+    const speakerActive = realState === 'playing' || realState === 'paused';
+
+    // Also check if source entity is actively playing on this speaker
+    const artEnt = artEntId && this._hass.states[artEntId];
+    const srcActive = artEnt && (artEnt.state === 'playing' || artEnt.state === 'paused')
+      && this._matchesSource(mainState?.attributes?.friendly_name, artEnt.attributes?.source);
+    const isActive = speakerActive || srcActive;
+
+    // Use source entity for play/pause when speaker entity doesn't reflect state
+    const ppTarget = (srcActive && !speakerActive) ? artEntId : mainEnt;
 
     if (!fromMini) {
       if (isActive) {
-        this._svc('media_player', 'media_play_pause', mainEnt);
+        this._svc('media_player', 'media_play_pause', ppTarget);
       } else if (this._pendingPlay) {
         this._pendingPlay = null;
         this._render();
