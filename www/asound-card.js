@@ -421,6 +421,13 @@ class AsoundMediaCard extends HTMLElement {
     return ((active && !isFollower) || this._forceExpanded) ? 3 : 1;
   }
 
+  _sourceMatchesSpeaker(speakerName, sourceName) {
+    if (!speakerName || !sourceName) return false;
+    const a = speakerName.toLowerCase();
+    const b = sourceName.toLowerCase();
+    return a === b || a.includes(b) || b.includes(a);
+  }
+
   _getState() {
     const entity = this._hass.states[this._config.entity];
     if (!entity) return null;
@@ -429,13 +436,20 @@ class AsoundMediaCard extends HTMLElement {
     const artEntPic = artEnt?.attributes?.entity_picture;
     const mainId = this._config.entity;
     const speakers = this._config.speakers || [];
+    const speakerName = a.friendly_name || mainId;
 
     const mainGm = a.group_members || [];
     const groupSet = new Set(mainGm);
     const isFollower = mainGm.length > 1 && mainGm[0] !== mainId;
 
-    let isPlaying = entity.state === 'playing';
-    let isPaused = entity.state === 'paused';
+    // Check source entity (Spotify) to see if it's targeting this speaker
+    const srcSource = artEnt?.attributes?.source || '';
+    const srcState = artEnt?.state;
+    const srcTargetsMe = this._sourceMatchesSpeaker(speakerName, srcSource);
+    const srcActive = srcTargetsMe && (srcState === 'playing' || srcState === 'paused');
+
+    let isPlaying = entity.state === 'playing' || (srcTargetsMe && srcState === 'playing');
+    let isPaused = entity.state === 'paused' || (srcTargetsMe && srcState === 'paused');
     let isActive = isPlaying || isPaused;
 
     const pp = this._pendingPlay;
@@ -451,8 +465,8 @@ class AsoundMediaCard extends HTMLElement {
     }
 
     return {
-      entity, a, isPlaying, isPaused, isActive, isFollower,
-      name: a.friendly_name || mainId,
+      entity, a, isPlaying, isPaused, isActive, isFollower, srcActive,
+      name: speakerName,
       showFull: (isActive && !isFollower) || this._forceExpanded,
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
@@ -714,11 +728,19 @@ class AsoundMediaCard extends HTMLElement {
     const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
-    const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
+    const speakerActive = mainState?.state === 'playing' || mainState?.state === 'paused';
+
+    // If source entity targets this speaker, use it for play/pause
+    const artEnt = artEntId && this._hass.states[artEntId];
+    const srcTargetsMe = artEnt && this._sourceMatchesSpeaker(
+      mainState?.attributes?.friendly_name, artEnt.attributes?.source);
+    const srcActive = srcTargetsMe && (artEnt.state === 'playing' || artEnt.state === 'paused');
+    const isActive = speakerActive || srcActive;
+    const ppTarget = (srcActive && !speakerActive) ? artEntId : mainEnt;
 
     if (!fromMini) {
       if (isActive) {
-        this._svc('media_player', 'media_play_pause', mainEnt);
+        this._svc('media_player', 'media_play_pause', ppTarget);
       } else if (this._pendingPlay) {
         this._pendingPlay = null;
         this._render();
@@ -751,15 +773,27 @@ class AsoundMediaCard extends HTMLElement {
     const match = sources.find(s => s.toLowerCase() === speakerName.toLowerCase())
       || sources.find(s => speakerName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(speakerName.toLowerCase()));
     const source = match || speakerName;
-    this._hass.callWS({
+
+    const doTransfer = () => this._hass.callWS({
       type: 'call_service',
       domain: 'media_player',
       service: 'select_source',
       target: { entity_id: artEntId },
       service_data: { source },
-    }).then(() => {
+    });
+
+    doTransfer().then(() => {
       setTimeout(() => {
         this._svc('media_player', 'media_play', artEntId);
+        // Retry: if source didn't stick after 3s, try again
+        setTimeout(() => {
+          const cur = this._hass.states[artEntId];
+          if (cur && !this._sourceMatchesSpeaker(speakerName, cur.attributes?.source || '')) {
+            doTransfer().then(() => {
+              setTimeout(() => this._svc('media_player', 'media_play', artEntId), 1000);
+            });
+          }
+        }, 3000);
       }, 1000);
     });
   }
