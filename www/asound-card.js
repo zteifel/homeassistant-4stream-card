@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-// ASound Media Card — wraps the native media-control card.
-// - Injects artwork from a secondary entity (e.g. Spotify)
-// - Adds per-speaker volume sliders to the group controls
+// ASound Media Card — looks like the native media-control card
+// with artwork from a secondary entity and per-speaker volume
+// in an inline group panel (tap the speaker icon).
 //
 // Install:
 //   1. Copy to <ha-config>/www/asound-card.js
@@ -12,18 +12,287 @@
 
 const STYLES = `
   :host { display: block; }
+  ha-card { overflow: hidden; position: relative; }
 
-  ha-card {
+  /* ── Playing state: artwork background ── */
+  .player {
+    position: relative;
     overflow: hidden;
-    transition: all 0.3s ease;
+  }
+  .player-bg {
+    position: absolute;
+    inset: -24px;
+    background-size: cover;
+    background-position: center;
+    filter: blur(20px) brightness(0.3) saturate(1.3);
+  }
+  .player.no-art .player-bg {
+    background: var(--card-background-color, #1c1c1c);
+    filter: none;
+  }
+  .player-content {
+    position: relative;
+    z-index: 1;
   }
 
-  /* Remove double card nesting from native card */
-  .native-wrap hui-media-control-card,
-  .native-wrap .type-media-control {
-    --ha-card-border-width: 0;
-    --ha-card-box-shadow: none;
-    --ha-card-border-radius: 0;
+  /* ── Now playing row ── */
+  .now-playing {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 16px 8px;
+  }
+  .art-thumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .art-placeholder {
+    width: 48px;
+    height: 48px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 20px;
+  }
+  .no-art .art-placeholder {
+    color: var(--secondary-text-color);
+    background: rgba(var(--rgb-primary-text-color, 0,0,0), 0.06);
+  }
+  .track-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .track-title {
+    font-size: 0.95em;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+  }
+  .track-artist {
+    font-size: 0.82em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: rgba(255,255,255,0.7);
+  }
+  .no-art .track-title { color: var(--primary-text-color); }
+  .no-art .track-artist { color: var(--secondary-text-color); }
+
+  /* ── Transport controls ── */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 4px 16px;
+  }
+  .ctrl-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: #fff;
+    transition: background 0.15s;
+  }
+  .ctrl-btn:hover { background: rgba(255,255,255,0.1); }
+  .ctrl-btn svg { width: 24px; height: 24px; fill: currentColor; }
+  .ctrl-btn.play-btn { width: 48px; height: 48px; }
+  .ctrl-btn.play-btn svg { width: 32px; height: 32px; }
+  .no-art .ctrl-btn { color: var(--primary-text-color); }
+  .no-art .ctrl-btn:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
+
+  .controls-right {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 2;
+  }
+  .sp-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    color: rgba(255,255,255,0.7);
+    transition: background 0.15s, color 0.15s;
+  }
+  .sp-icon-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+  .sp-icon-btn.active { color: var(--primary-color); }
+  .sp-icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
+  .no-art .sp-icon-btn { color: var(--secondary-text-color); }
+  .no-art .sp-icon-btn:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); color: var(--primary-text-color); }
+
+  /* ── Volume ── */
+  .vol-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px 12px;
+  }
+  .vol-icon {
+    color: rgba(255,255,255,0.6);
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    cursor: pointer;
+  }
+  .vol-icon svg { width: 20px; height: 20px; fill: currentColor; }
+  .no-art .vol-icon { color: var(--secondary-text-color); }
+  .vol-val {
+    font-size: 0.75em;
+    color: rgba(255,255,255,0.6);
+    width: 32px;
+    text-align: right;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .no-art .vol-val { color: var(--secondary-text-color); }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.2);
+    outline: none;
+    cursor: pointer;
+    min-width: 0;
+  }
+  .no-art input[type=range] { background: rgba(var(--rgb-primary-text-color,0,0,0),0.12); }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: none;
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: none;
+  }
+
+  /* ── Speaker group panel ── */
+  .sp-panel {
+    overflow: hidden;
+    transition: max-height 0.25s ease, padding 0.25s ease;
+    max-height: 0;
+    padding: 0 16px;
+    border-top: 0 solid transparent;
+  }
+  .sp-panel.open {
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 8px 16px 12px;
+  }
+  .no-art .sp-panel.open { border-top-color: var(--divider-color); }
+
+  .sp-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 0;
+  }
+
+  .sp-toggle {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .sp-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+  }
+  .sp-toggle .sl {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .no-art .sp-toggle .sl { background: rgba(var(--rgb-primary-text-color,0,0,0),0.12); }
+  .sp-toggle .sl::before {
+    content: '';
+    position: absolute;
+    width: 16px; height: 16px;
+    left: 2px; bottom: 2px;
+    background: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+  .no-art .sp-toggle .sl::before { background: var(--primary-text-color); }
+  .sp-toggle input:checked + .sl {
+    background: var(--primary-color);
+  }
+  .sp-toggle input:checked + .sl::before {
+    transform: translateX(16px);
+    background: #fff;
+  }
+
+  .sp-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .sp-name {
+    font-size: 0.88em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #fff;
+  }
+  .sp-name.master { font-weight: 600; }
+  .no-art .sp-name { color: var(--primary-text-color); }
+  .sp-vol-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .sp-vol-row input[type=range] { height: 3px; }
+  .sp-vol-val {
+    font-size: 0.7em;
+    color: rgba(255,255,255,0.5);
+    width: 28px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+  }
+  .no-art .sp-vol-val { color: var(--secondary-text-color); }
+
+  .sp-badge {
+    font-size: 0.68em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: rgba(var(--rgb-primary-color, 255,152,0), 0.2);
+    color: var(--primary-color);
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
   }
 
   /* ── Minimized ── */
@@ -35,7 +304,7 @@ const STYLES = `
     cursor: pointer;
     transition: background 0.15s;
   }
-  .mini-bar:hover { background: rgba(255,255,255,0.03); }
+  .mini-bar:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.03); }
   .mini-icon {
     width: 36px;
     height: 36px;
@@ -55,10 +324,7 @@ const STYLES = `
     object-fit: cover;
     flex-shrink: 0;
   }
-  .mini-info {
-    flex: 1;
-    min-width: 0;
-  }
+  .mini-info { flex: 1; min-width: 0; }
   .mini-name {
     font-size: 0.92em;
     font-weight: 500;
@@ -77,58 +343,15 @@ const STYLES = `
     border: none;
     color: var(--primary-text-color);
     cursor: pointer;
-    width: 36px;
-    height: 36px;
+    width: 36px; height: 36px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s;
-    padding: 0;
-    flex-shrink: 0;
+    padding: 0; flex-shrink: 0;
   }
-  .mini-play:hover { background: rgba(255,255,255,0.08); }
+  .mini-play:hover { background: rgba(var(--rgb-primary-text-color,0,0,0),0.06); }
   .mini-play svg { width: 20px; height: 20px; fill: currentColor; }
-
-  /* ── Injected volume sliders (into native group panel) ── */
-  .asound-vol-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 0 4px 0;
-  }
-  .asound-vol-row input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    flex: 1;
-    height: 4px;
-    border-radius: 2px;
-    background: rgba(255,255,255,0.12);
-    outline: none;
-    cursor: pointer;
-    min-width: 0;
-  }
-  .asound-vol-row input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    border: none;
-  }
-  .asound-vol-row input[type=range]::-moz-range-thumb {
-    width: 14px; height: 14px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    border: none;
-  }
-  .asound-vol-val {
-    font-size: 0.72em;
-    color: var(--secondary-text-color);
-    width: 30px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    flex-shrink: 0;
-  }
 
   .unavailable-msg {
     padding: 24px 16px;
@@ -138,26 +361,30 @@ const STYLES = `
   }
 `;
 
-const SVG_PLAY = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+const SVG = {
+  play: '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zm2 0V6l6.5 6L8 18zM16 6v12h2V6h-2z"/></svg>',
+  prev: '<svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>',
+  volHi: '<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>',
+  volLo: '<svg viewBox="0 0 24 24"><path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/></svg>',
+  volMute: '<svg viewBox="0 0 24 24"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>',
+  speakers: '<svg viewBox="0 0 24 24"><path d="M18.2 1H9.8C8.81 1 8 1.81 8 2.8v14.4c0 .99.81 1.8 1.8 1.8h8.4c.99 0 1.8-.81 1.8-1.8V2.8c0-.99-.81-1.8-1.8-1.8zM14 3c1.1 0 2 .89 2 2s-.9 2-2 2-2-.89-2-2 .9-2 2-2zm0 13.5c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm0-6.5c-1.38 0-2.5 1.12-2.5 2.5s1.12 2.5 2.5 2.5 2.5-1.12 2.5-2.5-1.12-2.5-2.5-2.5zM6 5H4v16c0 1.1.89 2 2 2h10v-2H6V5z"/></svg>',
+};
 
 function esc(s) {
   if (!s) return '';
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ═══════════════════════════════════════
-// CARD
-// ═══════════════════════════════════════
-
 class AsoundMediaCard extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: 'open' });
     this._forceExpanded = false;
-    this._nativeCard = null;
+    this._spPanelOpen = false;
     this._volTimers = {};
-    this._injectedSliders = new WeakSet();
-    this._injectInterval = null;
+    this._built = false;
   }
 
   static getConfigElement() {
@@ -177,100 +404,33 @@ class AsoundMediaCard extends HTMLElement {
       artwork_entity: config.artwork_entity || '',
       ...config,
     };
-    if (this._nativeCard) {
-      this._nativeCard.setConfig({ type: 'media-control', entity: config.entity });
-    }
+    if (this._built) this._render();
   }
 
   set hass(hass) {
     this._hass = hass;
-    if (!this.shadowRoot.querySelector('ha-card')) this._buildDom();
-
-    // Pass modified hass to native card (with injected artwork)
-    if (this._nativeCard) {
-      this._nativeCard.hass = this._proxyHass(hass);
+    if (!this._built) {
+      this.shadowRoot.innerHTML = `<style>${STYLES}</style><ha-card></ha-card>`;
+      this._card = this.shadowRoot.querySelector('ha-card');
+      this._built = true;
+      this._attachEvents();
     }
-
-    this._updateView();
-    this._tryInjectVolumeSliders();
+    this._render();
   }
 
   getCardSize() {
     if (!this._hass) return 1;
     const entity = this._hass.states[this._config?.entity];
     const active = entity && (entity.state === 'playing' || entity.state === 'paused');
-    return (active || this._forceExpanded) ? 4 : 1;
+    return (active || this._forceExpanded) ? 3 : 1;
   }
 
-  // ── Proxy hass: inject artwork from artwork_entity ──
-
-  _proxyHass(hass) {
-    const artEntId = this._config.artwork_entity;
-    if (!artEntId) return hass;
-
-    const artEnt = hass.states[artEntId];
-    const mainEnt = hass.states[this._config.entity];
-    if (!artEnt?.attributes?.entity_picture || !mainEnt) return hass;
-    if (mainEnt.attributes.entity_picture) return hass;
-
-    const proxy = Object.create(hass);
-    proxy.states = { ...hass.states };
-    proxy.states[this._config.entity] = {
-      ...mainEnt,
-      attributes: {
-        ...mainEnt.attributes,
-        entity_picture: artEnt.attributes.entity_picture,
-        media_title: mainEnt.attributes.media_title || artEnt.attributes.media_title,
-        media_artist: mainEnt.attributes.media_artist || artEnt.attributes.media_artist,
-        media_album_name: mainEnt.attributes.media_album_name || artEnt.attributes.media_album_name,
-      }
-    };
-    return proxy;
-  }
-
-  // ── Build DOM ──
-
-  async _buildDom() {
-    this.shadowRoot.innerHTML = `
-      <style>${STYLES}</style>
-      <ha-card>
-        <div class="mini-bar" hidden></div>
-        <div class="native-wrap" hidden></div>
-      </ha-card>
-    `;
-
-    this._miniBar = this.shadowRoot.querySelector('.mini-bar');
-    this._nativeWrap = this.shadowRoot.querySelector('.native-wrap');
-
-    try {
-      const helpers = await window.loadCardHelpers();
-      this._nativeCard = await helpers.createCardElement({
-        type: 'media-control',
-        entity: this._config.entity,
-      });
-      if (this._hass) this._nativeCard.hass = this._proxyHass(this._hass);
-      this._nativeWrap.appendChild(this._nativeCard);
-      this._updateView();
-
-      // Start observing the native card for group panel elements
-      this._startGroupObserver();
-    } catch (e) {
-      this._nativeWrap.innerHTML = `<div class="unavailable-msg">Could not load media-control card</div>`;
-      this._nativeWrap.hidden = false;
-    }
-
-    this._attachCardEvents();
-  }
-
-  // ── View toggle (minimized vs full) ──
-
-  _updateView() {
-    if (!this._hass || !this._miniBar) return;
+  _render() {
+    if (!this._card || !this._hass) return;
 
     const entity = this._hass.states[this._config.entity];
     if (!entity) {
-      this._miniBar.hidden = true;
-      this._nativeWrap.hidden = true;
+      this._card.innerHTML = `<div class="unavailable-msg">Entity ${esc(this._config.entity)} not found</div>`;
       return;
     }
 
@@ -283,188 +443,163 @@ class AsoundMediaCard extends HTMLElement {
 
     if (isActive) this._forceExpanded = false;
 
-    // Artwork URL for mini bar thumbnail
+    // Artwork: prefer artwork_entity, then main entity
     const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
-    const artUrl = (artEnt && artEnt.attributes.entity_picture) || a.entity_picture || '';
+    const artEntPic = artEnt?.attributes?.entity_picture;
+    const artUrl = artEntPic || a.entity_picture || '';
+    const hasArt = !!artUrl;
+    const title = a.media_title || (artEntPic && artEnt.attributes.media_title) || '';
+    const artist = a.media_artist || (artEntPic && artEnt.attributes.media_artist) || '';
+    const vol = Math.round((a.volume_level || 0) * 100);
+    const muted = a.is_volume_muted;
+    const volIcon = muted ? SVG.volMute : (vol > 50 ? SVG.volHi : SVG.volLo);
 
-    if (showFull) {
-      this._miniBar.hidden = true;
-      this._nativeWrap.hidden = false;
-    } else {
-      this._miniBar.hidden = false;
-      this._nativeWrap.hidden = true;
-      this._miniBar.innerHTML = `
-        ${artUrl
-          ? `<img class="mini-thumb" src="${esc(artUrl)}" alt="">`
-          : '<div class="mini-icon">♪</div>'
-        }
-        <div class="mini-info">
-          <div class="mini-name">${esc(name)}</div>
-          <div class="mini-state">${esc(entity.state)}</div>
+    const groupMembers = a.group_members || [];
+    const groupSet = new Set(groupMembers);
+    const master = groupMembers[0] || this._config.entity;
+    const groupCount = groupMembers.length > 1 ? groupMembers.length : 0;
+    const speakers = this._config.speakers || [];
+    const hasSpeakers = speakers.length > 0;
+
+    // ── Minimized ──
+    if (!showFull) {
+      this._card.innerHTML = `
+        <div class="mini-bar" data-action="expand">
+          ${artUrl
+            ? `<img class="mini-thumb" src="${esc(artUrl)}" alt="">`
+            : '<div class="mini-icon">♪</div>'
+          }
+          <div class="mini-info">
+            <div class="mini-name">${esc(name)}</div>
+            <div class="mini-state">${esc(entity.state)}</div>
+          </div>
+          <button class="mini-play" data-action="play">${SVG.play}</button>
         </div>
-        <button class="mini-play">${SVG_PLAY}</button>
       `;
+      return;
     }
+
+    // ── Full player ──
+    let html = `<div class="player ${hasArt ? '' : 'no-art'}">`;
+
+    // Background
+    html += `<div class="player-bg" ${hasArt ? `style="background-image:url('${esc(artUrl)}')"` : ''}></div>`;
+
+    // Content
+    html += `<div class="player-content">`;
+
+    // Speaker icon (top right)
+    if (hasSpeakers) {
+      html += `<div class="controls-right">`;
+      html += `<button class="sp-icon-btn ${this._spPanelOpen ? 'active' : ''}" data-action="toggle-sp">${SVG.speakers}</button>`;
+      html += `</div>`;
+    }
+
+    // Now playing
+    html += `<div class="now-playing">`;
+    if (hasArt) {
+      html += `<img class="art-thumb" src="${esc(artUrl)}" alt="">`;
+    } else {
+      html += `<div class="art-placeholder">♪</div>`;
+    }
+    html += `<div class="track-info">`;
+    html += `<div class="track-title">${title ? esc(title) : (isPlaying ? esc(name) : esc(entity.state))}</div>`;
+    if (artist) html += `<div class="track-artist">${esc(artist)}</div>`;
+    html += `</div></div>`;
+
+    // Transport
+    html += `<div class="controls">`;
+    html += `<button class="ctrl-btn" data-action="prev">${SVG.prev}</button>`;
+    html += `<button class="ctrl-btn play-btn" data-action="pp">${isPlaying ? SVG.pause : SVG.play}</button>`;
+    html += `<button class="ctrl-btn" data-action="next">${SVG.next}</button>`;
+    html += `</div>`;
+
+    // Volume
+    html += `<div class="vol-row">`;
+    html += `<span class="vol-icon" data-action="mute">${volIcon}</span>`;
+    html += `<input type="range" min="0" max="100" value="${vol}" data-vol="${this._config.entity}">`;
+    html += `<span class="vol-val">${vol}%</span>`;
+    html += `</div>`;
+
+    // Speaker panel (inline, below volume)
+    if (hasSpeakers) {
+      const panelH = this._spPanelOpen ? (speakers.length * 52 + 20) : 0;
+      html += `<div class="sp-panel ${this._spPanelOpen ? 'open' : ''}" style="max-height:${panelH}px">`;
+
+      for (const spId of speakers) {
+        const sp = this._hass.states[spId];
+        if (!sp) continue;
+        const spName = sp.attributes.friendly_name || spId;
+        const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const inGroup = groupSet.has(spId);
+        const isMaster = spId === master && groupCount > 0;
+        const isMain = spId === this._config.entity;
+
+        html += `<div class="sp-row">`;
+        html += `<label class="sp-toggle"><input type="checkbox" ${inGroup ? 'checked' : ''} ${isMain ? 'disabled' : ''} data-group-toggle="${spId}"><span class="sl"></span></label>`;
+        html += `<div class="sp-info">`;
+        html += `<div class="sp-name ${isMaster ? 'master' : ''}">${esc(spName)}</div>`;
+        html += `<div class="sp-vol-row">`;
+        html += `<input type="range" min="0" max="100" value="${spVol}" data-vol="${spId}">`;
+        html += `<span class="sp-vol-val">${spVol}%</span>`;
+        html += `</div>`;
+        html += `</div>`;
+        if (isMaster) html += `<span class="sp-badge">master</span>`;
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    html += `</div></div>`; // player-content, player
+    this._card.innerHTML = html;
   }
 
-  _attachCardEvents() {
-    const card = this.shadowRoot.querySelector('ha-card');
-    card.addEventListener('click', (e) => {
-      if (e.target.closest('.mini-bar') && !e.target.closest('.mini-play')) {
-        this._forceExpanded = true;
-        this._updateView();
-        return;
+  _attachEvents() {
+    this._card.addEventListener('click', (e) => {
+      const action = e.target.closest('[data-action]')?.dataset?.action;
+      if (!action) return;
+
+      if (action === 'expand') { this._forceExpanded = true; this._render(); }
+      else if (action === 'play') this._svc('media_player', 'media_play', this._config.entity);
+      else if (action === 'pp') this._svc('media_player', 'media_play_pause', this._config.entity);
+      else if (action === 'next') this._svc('media_player', 'media_next_track', this._config.entity);
+      else if (action === 'prev') this._svc('media_player', 'media_previous_track', this._config.entity);
+      else if (action === 'mute') {
+        const st = this._hass.states[this._config.entity];
+        this._svc('media_player', 'volume_mute', this._config.entity, { is_volume_muted: !st?.attributes?.is_volume_muted });
       }
-      if (e.target.closest('.mini-play')) {
-        this._svc('media_player', 'media_play', this._config.entity);
-        return;
+      else if (action === 'toggle-sp') {
+        this._spPanelOpen = !this._spPanelOpen;
+        this._render();
       }
     });
-  }
 
-  // ── Inject volume sliders into native group panel ──
-  //
-  // The native media-control card (HA 2024.8+) can show group
-  // members with enable/disable toggles. We observe the native
-  // card's shadow DOM tree, find those rows, and append a volume
-  // slider under each speaker name.
-
-  _startGroupObserver() {
-    if (!this._nativeCard) return;
-
-    // Observe the native card's subtree for changes
-    const observer = new MutationObserver(() => {
-      this._tryInjectVolumeSliders();
-    });
-
-    // Observe at our wrapper level (captures shadow DOM changes that affect layout)
-    observer.observe(this._nativeWrap, { childList: true, subtree: true });
-
-    // Also poll periodically since shadow DOM mutations may not bubble
-    this._injectInterval = setInterval(() => this._tryInjectVolumeSliders(), 1000);
-  }
-
-  _tryInjectVolumeSliders() {
-    if (!this._hass || !this._nativeCard || !this._config.speakers?.length) return;
-
-    // Walk through shadow DOMs to find group member elements
-    const roots = this._collectShadowRoots(this._nativeCard);
-
-    for (const root of roots) {
-      // Look for common patterns in HA's group member UI
-      // Pattern 1: elements with entity-id attributes matching our speakers
-      // Pattern 2: ha-switch or toggle elements inside group panels
-      // Pattern 3: elements containing speaker friendly names
-
-      const allElements = root.querySelectorAll('*');
-      for (const el of allElements) {
-        const entityId = el.getAttribute('entity-id') || el.getAttribute('data-entity-id') || el.entityId;
-        if (entityId && this._config.speakers.includes(entityId)) {
-          this._injectSliderForElement(el, entityId);
-        }
-      }
-
-      // Also look for mwc-list-item, ha-list-item, or similar containing speaker names
-      const listItems = root.querySelectorAll('mwc-list-item, ha-list-item, ha-md-list-item, [role="option"], [role="listitem"]');
-      for (const item of listItems) {
-        const matchedId = this._matchSpeakerByName(item.textContent);
-        if (matchedId) {
-          this._injectSliderForElement(item, matchedId);
-        }
-      }
-    }
-  }
-
-  _collectShadowRoots(el) {
-    const roots = [];
-    if (el.shadowRoot) {
-      roots.push(el.shadowRoot);
-      el.shadowRoot.querySelectorAll('*').forEach(child => {
-        roots.push(...this._collectShadowRoots(child));
-      });
-    }
-    el.querySelectorAll('*').forEach(child => {
-      roots.push(...this._collectShadowRoots(child));
-    });
-    return roots;
-  }
-
-  _matchSpeakerByName(text) {
-    if (!text) return null;
-    const cleaned = text.trim().toLowerCase();
-    for (const spId of this._config.speakers) {
-      const sp = this._hass.states[spId];
-      if (!sp) continue;
-      const name = (sp.attributes.friendly_name || '').toLowerCase();
-      if (name && cleaned.includes(name)) return spId;
-    }
-    return null;
-  }
-
-  _injectSliderForElement(el, entityId) {
-    // Don't inject twice
-    if (el._asoundVolInjected) return;
-
-    const sp = this._hass.states[entityId];
-    if (!sp) return;
-
-    const vol = Math.round((sp.attributes.volume_level || 0) * 100);
-
-    const row = document.createElement('div');
-    row.className = 'asound-vol-row';
-    row.innerHTML = `
-      <input type="range" min="0" max="100" value="${vol}" data-vol="${entityId}">
-      <span class="asound-vol-val">${vol}%</span>
-    `;
-
-    // Inject a style tag if not already present in this root
-    const parentRoot = el.getRootNode();
-    if (parentRoot && !parentRoot.querySelector('.asound-injected-style')) {
-      const style = document.createElement('style');
-      style.className = 'asound-injected-style';
-      style.textContent = `
-        .asound-vol-row {
-          display: flex; align-items: center; gap: 6px;
-          padding: 2px 16px 6px;
-        }
-        .asound-vol-row input[type=range] {
-          -webkit-appearance: none; appearance: none;
-          flex: 1; height: 4px; border-radius: 2px;
-          background: rgba(255,255,255,0.12);
-          outline: none; cursor: pointer; min-width: 0;
-        }
-        .asound-vol-row input[type=range]::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 14px; height: 14px; border-radius: 50%;
-          background: var(--primary-color); border: none;
-        }
-        .asound-vol-val {
-          font-size: 0.72em; color: var(--secondary-text-color);
-          width: 30px; text-align: right; font-variant-numeric: tabular-nums;
-        }
-      `;
-      parentRoot.appendChild(style);
-    }
-
-    // Insert after the element
-    el.parentNode.insertBefore(row, el.nextSibling);
-    el._asoundVolInjected = true;
-
-    // Volume slider events
-    const slider = row.querySelector('input');
-    const label = row.querySelector('.asound-vol-val');
-    slider.addEventListener('input', () => {
+    this._card.addEventListener('input', (e) => {
+      const slider = e.target.closest('input[data-vol]');
+      if (!slider) return;
+      const eid = slider.dataset.vol;
       const val = parseInt(slider.value);
-      label.textContent = val + '%';
-      clearTimeout(this._volTimers[entityId]);
-      this._volTimers[entityId] = setTimeout(() => {
-        this._svc('media_player', 'volume_set', entityId, { volume_level: val / 100 });
+      const label = slider.nextElementSibling;
+      if (label) label.textContent = val + '%';
+      clearTimeout(this._volTimers[eid]);
+      this._volTimers[eid] = setTimeout(() => {
+        this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
       }, 150);
     });
-  }
 
-  disconnectedCallback() {
-    if (this._injectInterval) clearInterval(this._injectInterval);
+    this._card.addEventListener('change', (e) => {
+      const toggle = e.target.closest('input[data-group-toggle]');
+      if (!toggle) return;
+      const spId = toggle.dataset.groupToggle;
+      if (toggle.checked) {
+        const st = this._hass.states[this._config.entity];
+        const current = st?.attributes?.group_members || [this._config.entity];
+        this._svc('media_player', 'join', this._config.entity, { group_members: [...new Set([...current, spId])] });
+      } else {
+        this._svc('media_player', 'unjoin', spId);
+      }
+    });
   }
 
   _svc(domain, service, eid, data = {}) {
@@ -481,21 +616,15 @@ const EDITOR_STYLES = `
   :host { display: block; }
   .row { margin-bottom: 16px; }
   .row label {
-    display: block;
-    font-size: 0.85em;
-    font-weight: 500;
-    margin-bottom: 4px;
-    color: var(--secondary-text-color);
+    display: block; font-size: 0.85em; font-weight: 500;
+    margin-bottom: 4px; color: var(--secondary-text-color);
   }
   .sp-list { display: flex; flex-direction: column; gap: 6px; }
   .sp-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    display: flex; align-items: center; gap: 8px;
     padding: 6px 8px;
     background: rgba(var(--rgb-primary-text-color, 0,0,0), 0.04);
-    border-radius: 6px;
-    font-size: 0.9em;
+    border-radius: 6px; font-size: 0.9em;
   }
   .sp-item span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sp-remove {
@@ -524,44 +653,23 @@ class AsoundMediaCardEditor extends HTMLElement {
 
   _render() {
     const speakers = this._config.speakers || [];
-
     this.shadowRoot.innerHTML = `
       <style>${EDITOR_STYLES}</style>
-
       <div class="row">
         <label>Entity (main speaker)</label>
-        <ha-entity-picker
-          id="entity-picker"
-          allow-custom-entity
-          .includeDomains=${['media_player']}
-        ></ha-entity-picker>
+        <ha-entity-picker id="entity-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
       </div>
-
       <div class="row">
-        <label>Artwork Entity (optional — e.g. your Spotify player)</label>
-        <ha-entity-picker
-          id="artwork-picker"
-          allow-custom-entity
-          .includeDomains=${['media_player']}
-        ></ha-entity-picker>
+        <label>Artwork Entity (optional — e.g. Spotify)</label>
+        <ha-entity-picker id="artwork-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
       </div>
-
       <div class="row">
-        <label>Speakers (volume sliders added to group controls)</label>
-        <div class="sp-list" id="sp-list">
-          ${speakers.map((s, i) => `
-            <div class="sp-item">
-              <span>${s}</span>
-              <button class="sp-remove" data-remove="${i}">✕</button>
-            </div>
-          `).join('')}
-        </div>
+        <label>Speakers (tap speaker icon on card to manage)</label>
+        <div class="sp-list">${speakers.map((s, i) => `
+          <div class="sp-item"><span>${s}</span><button class="sp-remove" data-remove="${i}">✕</button></div>
+        `).join('')}</div>
         <div style="margin-top:8px">
-          <ha-entity-picker
-            id="add-picker"
-            allow-custom-entity
-            .includeDomains=${['media_player']}
-          ></ha-entity-picker>
+          <ha-entity-picker id="add-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
         </div>
       </div>
     `;
@@ -569,18 +677,12 @@ class AsoundMediaCardEditor extends HTMLElement {
     const ep = this.shadowRoot.getElementById('entity-picker');
     ep.value = this._config.entity || '';
     if (this._hass) ep.hass = this._hass;
-    ep.addEventListener('value-changed', (e) => {
-      this._config = { ...this._config, entity: e.detail.value };
-      this._fire();
-    });
+    ep.addEventListener('value-changed', (e) => { this._config = { ...this._config, entity: e.detail.value }; this._fire(); });
 
     const ap = this.shadowRoot.getElementById('artwork-picker');
     ap.value = this._config.artwork_entity || '';
     if (this._hass) ap.hass = this._hass;
-    ap.addEventListener('value-changed', (e) => {
-      this._config = { ...this._config, artwork_entity: e.detail.value || '' };
-      this._fire();
-    });
+    ap.addEventListener('value-changed', (e) => { this._config = { ...this._config, artwork_entity: e.detail.value || '' }; this._fire(); });
 
     const addP = this.shadowRoot.getElementById('add-picker');
     if (this._hass) addP.hass = this._hass;
@@ -588,19 +690,16 @@ class AsoundMediaCardEditor extends HTMLElement {
       const val = e.detail.value;
       if (val && !(this._config.speakers || []).includes(val)) {
         this._config = { ...this._config, speakers: [...(this._config.speakers || []), val] };
-        this._fire();
-        this._render();
+        this._fire(); this._render();
       }
     });
 
     this.shadowRoot.querySelectorAll('[data-remove]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const idx = parseInt(btn.dataset.remove);
         const sp = [...(this._config.speakers || [])];
-        sp.splice(idx, 1);
+        sp.splice(parseInt(btn.dataset.remove), 1);
         this._config = { ...this._config, speakers: sp };
-        this._fire();
-        this._render();
+        this._fire(); this._render();
       });
     });
   }
@@ -610,18 +709,12 @@ class AsoundMediaCardEditor extends HTMLElement {
   }
 }
 
-
-// ═══════════════════════════════════════
-// REGISTER
-// ═══════════════════════════════════════
-
 customElements.define('asound-media-card', AsoundMediaCard);
 customElements.define('asound-media-card-editor', AsoundMediaCardEditor);
-
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'asound-media-card',
   name: 'ASound Media',
-  description: 'Media player with artwork injection and per-speaker volume in group controls',
+  description: 'Media player with artwork fallback and inline speaker group with volume',
   preview: true,
 });
