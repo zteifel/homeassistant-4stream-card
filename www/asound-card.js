@@ -472,7 +472,7 @@ class AsoundMediaCard extends HTMLElement {
       artUrl: artEntPic || a.entity_picture || '',
       title: a.media_title || (artEntPic && artEnt?.attributes.media_title) || '',
       artist: a.media_artist || (artEntPic && artEnt?.attributes.media_artist) || '',
-      vol: Math.round(((entity.state === 'playing' || entity.state === 'paused' ? a.volume_level : null) ?? artEnt?.attributes?.volume_level ?? 0) * 100),
+      vol: Math.round((a.volume_level || 0) * 100),
       muted: !!a.is_volume_muted,
       groupMembers: mainGm, groupSet, speakers,
       hasSpeakers: speakers.length > 0,
