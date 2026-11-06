@@ -427,10 +427,20 @@ class AsoundMediaCard extends HTMLElement {
     const a = entity.attributes;
     const artEnt = this._config.source_entity && this._hass.states[this._config.source_entity];
     const artEntPic = artEnt?.attributes?.entity_picture;
-    const groupMembers = a.group_members || [];
-    const groupSet = new Set(groupMembers);
-    const isFollower = groupMembers.length > 1 && groupMembers[0] !== this._config.entity;
+    const mainId = this._config.entity;
     const speakers = this._config.speakers || [];
+    const groupSet = new Set();
+    const mainGm = a.group_members || [];
+    for (const id of mainGm) groupSet.add(id);
+    for (const spId of speakers) {
+      const sp = this._hass.states[spId];
+      const spGm = sp?.attributes?.group_members || [];
+      if (spGm.includes(mainId)) {
+        for (const id of spGm) groupSet.add(id);
+      }
+    }
+    const groupMembers = [...groupSet];
+    const isFollower = groupMembers.length > 1 && groupMembers[0] !== mainId;
 
     let isPlaying = entity.state === 'playing';
     let isPaused = entity.state === 'paused';
@@ -689,6 +699,8 @@ class AsoundMediaCard extends HTMLElement {
       } else {
         this._svc('media_player', 'unjoin', spId);
       }
+      setTimeout(() => { this._lastRenderKey = null; this._render(); }, 2000);
+      setTimeout(() => { this._lastRenderKey = null; this._render(); }, 5000);
     });
   }
 
