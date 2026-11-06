@@ -423,8 +423,9 @@ class AsoundMediaCard extends HTMLElement {
 
   _sourceMatchesSpeaker(speakerName, sourceName) {
     if (!speakerName || !sourceName) return false;
-    const a = speakerName.toLowerCase();
-    const b = sourceName.toLowerCase();
+    const norm = s => s.toLowerCase().replace(/[\s\-_]+/g, '');
+    const a = norm(speakerName);
+    const b = norm(sourceName);
     return a === b || a.includes(b) || b.includes(a);
   }
 
@@ -770,8 +771,10 @@ class AsoundMediaCard extends HTMLElement {
     if (!artEnt) return;
     const speakerName = mainState?.attributes?.friendly_name || mainEnt;
     const sources = artEnt.attributes.source_list || [];
-    const match = sources.find(s => s.toLowerCase() === speakerName.toLowerCase())
-      || sources.find(s => speakerName.toLowerCase().includes(s.toLowerCase()) || s.toLowerCase().includes(speakerName.toLowerCase()));
+    const norm = s => s.toLowerCase().replace(/[\s\-_]+/g, '');
+    const nName = norm(speakerName);
+    const match = sources.find(s => norm(s) === nName)
+      || sources.find(s => nName.includes(norm(s)) || norm(s).includes(nName));
     const source = match || speakerName;
 
     const doTransfer = () => this._hass.callWS({
