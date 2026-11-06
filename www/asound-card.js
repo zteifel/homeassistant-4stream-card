@@ -365,6 +365,7 @@ class AsoundMediaCard extends HTMLElement {
     this._volTimers = {};
     this._sliderActive = false;
     this._sliderEndTimer = null;
+    this._pendingVol = {};
     this._built = false;
   }
 
@@ -556,15 +557,17 @@ class AsoundMediaCard extends HTMLElement {
     if (volIcon) volIcon.innerHTML = s.muted ? SVG.volMute : (s.vol > 50 ? SVG.volHi : SVG.volLo);
 
     if (!this._sliderActive) {
+      const mainVol = this._resolveVol(this._config.entity, s.vol);
       const volSlider = q('input[data-vol="__group__"]');
-      if (volSlider) volSlider.value = s.vol;
+      if (volSlider) volSlider.value = mainVol;
       const volVal = q('.vol-val');
-      if (volVal) volVal.textContent = s.vol + '%';
+      if (volVal) volVal.textContent = mainVol + '%';
 
       for (const spId of s.speakers) {
         const sp = this._hass.states[spId];
         if (!sp) continue;
-        const spVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const hassVol = Math.round((sp.attributes.volume_level || 0) * 100);
+        const spVol = this._resolveVol(spId, hassVol);
         const spSlider = q(`input[data-vol="${spId}"]`);
         if (spSlider) spSlider.value = spVol;
         const spVal = spSlider?.nextElementSibling;
@@ -623,18 +626,22 @@ class AsoundMediaCard extends HTMLElement {
 
       clearTimeout(this._volTimers[eid]);
       this._volTimers[eid] = setTimeout(() => {
+        const now = Date.now();
         if (eid === '__group__') {
           if (this._groupVolStart) {
             const delta = val - this._groupVolStart.slider;
             for (const m of this._groupVolStart.members) {
               const base = this._groupVolStart[m] ?? val;
               const nv = Math.max(0, Math.min(100, base + delta));
+              this._pendingVol[m] = { value: nv, time: now };
               this._svc('media_player', 'volume_set', m, { volume_level: nv / 100 });
             }
           } else {
+            this._pendingVol[this._config.entity] = { value: val, time: now };
             this._svc('media_player', 'volume_set', this._config.entity, { volume_level: val / 100 });
           }
         } else {
+          this._pendingVol[eid] = { value: val, time: now };
           this._svc('media_player', 'volume_set', eid, { volume_level: val / 100 });
         }
       }, 150);
@@ -652,6 +659,20 @@ class AsoundMediaCard extends HTMLElement {
         this._svc('media_player', 'unjoin', spId);
       }
     });
+  }
+
+  _resolveVol(entityId, hassVol) {
+    const p = this._pendingVol[entityId];
+    if (!p) return hassVol;
+    if (Date.now() - p.time > 3000) {
+      delete this._pendingVol[entityId];
+      return hassVol;
+    }
+    if (Math.abs(hassVol - p.value) <= 2) {
+      delete this._pendingVol[entityId];
+      return hassVol;
+    }
+    return p.value;
   }
 
   _handlePlay(fromMini) {
