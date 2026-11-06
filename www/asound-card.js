@@ -745,8 +745,21 @@ class AsoundMediaCard extends HTMLElement {
     const ppTarget = (srcActive && !speakerActive) ? artEntId : mainEnt;
 
     if (!fromMini) {
-      if (isActive) {
+      if (isActive && srcTargetsMe) {
+        // This speaker is the active Spotify target — toggle play/pause
         this._svc('media_player', 'media_play_pause', ppTarget);
+      } else if (isActive && artEntId) {
+        // Playing but NOT the Spotify target — unjoin and take over
+        this._pendingPlay = { time: Date.now() };
+        this._render();
+        this._hass.callWS({
+          type: 'call_service', domain: 'media_player', service: 'unjoin',
+          target: { entity_id: mainEnt }, service_data: {},
+        }).then(() => {
+          setTimeout(() => this._transferSpotify(artEntId, mainState, mainEnt), 1500);
+        });
+      } else if (isActive) {
+        this._svc('media_player', 'media_play_pause', mainEnt);
       } else if (this._pendingPlay) {
         this._pendingPlay = null;
         this._render();
