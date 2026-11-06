@@ -522,12 +522,13 @@ class AsoundMediaCard extends HTMLElement {
     const hasArt = !!s.artUrl;
     const speakers = s.speakers;
     let html = `<div class="player ${hasArt ? '' : 'no-art'}">`;
-    html += `<div class="player-content">`;
 
     if (hasArt) {
       html += `<img class="art-bg-img" src="" alt="">`;
       html += `<div class="art-bg-fade"></div>`;
     }
+
+    html += `<div class="player-content">`;
 
     html += `<div class="track-area">`;
     html += `<div class="speaker-name">${esc(s.name)}</div>`;
