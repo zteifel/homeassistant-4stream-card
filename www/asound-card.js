@@ -449,8 +449,10 @@ class AsoundMediaCard extends HTMLElement {
     const srcTargetsMe = this._sourceMatchesSpeaker(speakerName, srcSource);
     const srcActive = srcTargetsMe && (srcState === 'playing' || srcState === 'paused');
 
-    let isPlaying = entity.state === 'playing' || (srcTargetsMe && srcState === 'playing');
-    let isPaused = entity.state === 'paused' || (srcTargetsMe && srcState === 'paused');
+    // Speaker entity state takes priority; source entity only fills in when speaker is idle
+    const speakerActive = entity.state === 'playing' || entity.state === 'paused';
+    let isPlaying = speakerActive ? entity.state === 'playing' : (srcTargetsMe && srcState === 'playing');
+    let isPaused = speakerActive ? entity.state === 'paused' : (srcTargetsMe && srcState === 'paused');
     let isActive = isPlaying || isPaused;
 
     const pp = this._pendingPlay;
