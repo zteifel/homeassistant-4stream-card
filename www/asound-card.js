@@ -33,7 +33,8 @@ const STYLES = `
     position: absolute;
     top: 0; right: 0; bottom: 0;
     width: 55%;
-    object-fit: cover;
+    object-fit: contain;
+    object-position: right top;
     z-index: 0;
   }
   .art-bg-fade {
