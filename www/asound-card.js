@@ -458,7 +458,7 @@ class AsoundMediaCard extends HTMLElement {
   _rebuild(s) {
     if (!s.showFull) {
       this._card.innerHTML = `
-        <div class="mini-bar" data-action="expand">
+        <div class="mini-bar">
           <div class="mini-icon">♪</div>
           <div class="mini-info">
             <div class="mini-name"></div>
@@ -578,9 +578,10 @@ class AsoundMediaCard extends HTMLElement {
       const action = e.target.closest('[data-action]')?.dataset?.action;
       if (!action) return;
 
-      if (action === 'expand') { this._forceExpanded = true; this._render(); }
-      else if (action === 'play') this._svc('media_player', 'media_play', this._config.entity);
-      else if (action === 'pp') this._svc('media_player', 'media_play_pause', this._config.entity);
+      if (action === 'play' || action === 'pp') {
+        this._handlePlay(action === 'play');
+      }
+      else if (action === 'expand') { this._forceExpanded = true; this._render(); }
       else if (action === 'next') this._svc('media_player', 'media_next_track', this._config.entity);
       else if (action === 'prev') this._svc('media_player', 'media_previous_track', this._config.entity);
       else if (action === 'mute') {
@@ -643,6 +644,23 @@ class AsoundMediaCard extends HTMLElement {
         this._svc('media_player', 'unjoin', spId);
       }
     });
+  }
+
+  _handlePlay(fromMini) {
+    const artEntId = this._config.artwork_entity;
+    const mainEnt = this._config.entity;
+    const mainState = this._hass.states[mainEnt];
+
+    if (fromMini && artEntId) {
+      const artEnt = this._hass.states[artEntId];
+      if (artEnt) {
+        const speakerName = mainState?.attributes?.friendly_name || mainEnt;
+        this._svc('media_player', 'select_source', artEntId, { source: speakerName });
+        return;
+      }
+    }
+
+    this._svc('media_player', 'media_play_pause', mainEnt);
   }
 
   _svc(domain, service, eid, data = {}) {
