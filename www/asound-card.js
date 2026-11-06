@@ -723,6 +723,7 @@ class AsoundMediaCard extends HTMLElement {
         const st = this._hass.states[this._config.entity];
         const current = st?.attributes?.group_members || [this._config.entity];
         this._svc('media_player', 'join', this._config.entity, { group_members: [...new Set([...current, spId])] });
+        setTimeout(() => this._svc('media_player', 'media_play', this._config.entity), 1500);
       } else {
         this._svc('media_player', 'unjoin', spId);
       }
