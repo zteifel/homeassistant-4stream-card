@@ -382,7 +382,7 @@ class AsoundMediaCard extends HTMLElement {
     this._config = {
       entity: config.entity,
       speakers: config.speakers || [],
-      artwork_entity: config.artwork_entity || '',
+      source_entity: config.source_entity || config.artwork_entity || '',
       ...config,
     };
     if (this._built) this._render();
@@ -413,7 +413,7 @@ class AsoundMediaCard extends HTMLElement {
     const isPlaying = entity.state === 'playing';
     const isPaused = entity.state === 'paused';
     const isActive = isPlaying || isPaused;
-    const artEnt = this._config.artwork_entity && this._hass.states[this._config.artwork_entity];
+    const artEnt = this._config.source_entity && this._hass.states[this._config.source_entity];
     const artEntPic = artEnt?.attributes?.entity_picture;
     const groupMembers = a.group_members || [];
     const groupSet = new Set(groupMembers);
@@ -647,7 +647,7 @@ class AsoundMediaCard extends HTMLElement {
   }
 
   _handlePlay(fromMini) {
-    const artEntId = this._config.artwork_entity;
+    const artEntId = this._config.source_entity;
     const mainEnt = this._config.entity;
     const mainState = this._hass.states[mainEnt];
     const isActive = mainState?.state === 'playing' || mainState?.state === 'paused';
@@ -729,8 +729,8 @@ class AsoundMediaCardEditor extends HTMLElement {
         <ha-entity-picker id="entity-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
       </div>
       <div class="row">
-        <label>Artwork Entity (optional — e.g. Spotify)</label>
-        <ha-entity-picker id="artwork-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
+        <label>Source Entity (e.g. Spotify — used for artwork and playback)</label>
+        <ha-entity-picker id="source-picker" allow-custom-entity .includeDomains=${['media_player']}></ha-entity-picker>
       </div>
       <div class="row">
         <label>Speakers (tap speaker icon on card to manage)</label>
@@ -748,10 +748,10 @@ class AsoundMediaCardEditor extends HTMLElement {
     if (this._hass) ep.hass = this._hass;
     ep.addEventListener('value-changed', (e) => { this._config = { ...this._config, entity: e.detail.value }; this._fire(); });
 
-    const ap = this.shadowRoot.getElementById('artwork-picker');
-    ap.value = this._config.artwork_entity || '';
+    const ap = this.shadowRoot.getElementById('source-picker');
+    ap.value = this._config.source_entity || '';
     if (this._hass) ap.hass = this._hass;
-    ap.addEventListener('value-changed', (e) => { this._config = { ...this._config, artwork_entity: e.detail.value || '' }; this._fire(); });
+    ap.addEventListener('value-changed', (e) => { this._config = { ...this._config, source_entity: e.detail.value || '' }; this._fire(); });
 
     const addP = this.shadowRoot.getElementById('add-picker');
     if (this._hass) addP.hass = this._hass;
